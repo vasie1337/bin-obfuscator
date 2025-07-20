@@ -1,6 +1,8 @@
 mod binary;
-use binary::PeFile;
+mod analysis;
 
+use binary::PeFile;
+use crate::analysis::FunctionDiscovery;
 use crate::binary::SectionOperations;
 use tracing::{error, info};
 
@@ -20,6 +22,12 @@ fn main() {
     }
     info!("PE file loaded");
 
-    let sections = pe_file.get_code_sections().unwrap();
-    info!("Sections: {:?}", sections);
+    let function_discovery = match FunctionDiscovery::new(pe_file) {
+        Ok(fd) => fd,
+        Err(e) => {
+            error!("Failed to create function discovery: {}", e);
+            return;
+        }
+    };
+    function_discovery.run();
 }

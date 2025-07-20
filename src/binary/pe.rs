@@ -3,17 +3,21 @@ use anyhow::{Result, Context, bail};
 
 pub struct PeFile {
     buffer: Vec<u8>,
+    loaded: bool,
+    path: Option<String>,
 }
 
 #[allow(dead_code)]
 impl PeFile {
     pub fn new() -> Self {
-        Self { buffer: Vec::new() }
+        Self { buffer: Vec::new(), loaded: false, path: None }
     }
 
     pub fn load(&mut self, path: &str) -> Result<()> {
         self.buffer = std::fs::read(path)
             .with_context(|| format!("Failed to read file: {}", path))?;
+        self.loaded = true;
+        self.path = Some(path.to_string());
         Ok(())
     }
 
@@ -74,5 +78,13 @@ impl PeFile {
         
         self.buffer[offset as usize..end_offset as usize].copy_from_slice(data);
         Ok(())
+    }
+
+    pub fn is_loaded(&self) -> bool {
+        self.loaded
+    }
+
+    pub fn get_path(&self) -> Option<&str> {
+        self.path.as_deref()
     }
 }
