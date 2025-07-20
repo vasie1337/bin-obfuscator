@@ -1,7 +1,8 @@
 mod binary;
-use binary::PeFile;
+mod analysis;
 
-use crate::binary::SectionOperations;
+use binary::PeFile;
+use crate::analysis::FunctionDiscovery;
 use tracing::{error, info};
 
 fn main() {
@@ -14,12 +15,16 @@ fn main() {
         .init();
 
     let mut pe_file = PeFile::new();
-    if let Err(e) = pe_file.load("C:\\Windows\\System32\\calc.exe") {
+    if let Err(e) = pe_file.load("C:\\Users\\vasie\\Documents\\GitHub\\bin-obfuscator\\testdata\\test.exe") {
         error!("Failed to load PE file: {}", e);
         return;
     }
     info!("PE file loaded");
 
-    let sections = pe_file.get_code_sections().unwrap();
-    info!("Sections: {:?}", sections);
+    let mut function_discovery = FunctionDiscovery::new(pe_file).unwrap();
+    
+    let functions = function_discovery.run().unwrap();
+    for function in functions {
+        info!("Function at 0x{:x}: {:?}", function.start_rva, function);
+    }
 }
