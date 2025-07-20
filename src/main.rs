@@ -3,7 +3,6 @@ mod analysis;
 
 use binary::PeFile;
 use crate::analysis::FunctionDiscovery;
-use crate::binary::SectionOperations;
 use tracing::{error, info};
 
 fn main() {
@@ -16,13 +15,13 @@ fn main() {
         .init();
 
     let mut pe_file = PeFile::new();
-    if let Err(e) = pe_file.load("C:\\Windows\\System32\\calc.exe") {
+    if let Err(e) = pe_file.load("C:\\Users\\vasie\\Documents\\GitHub\\bin-obfuscator\\testdata\\test.exe") {
         error!("Failed to load PE file: {}", e);
         return;
     }
     info!("PE file loaded");
 
-    let function_discovery = match FunctionDiscovery::new(pe_file) {
+    let mut function_discovery = match FunctionDiscovery::new(pe_file) {
         Ok(fd) => fd,
         Err(e) => {
             error!("Failed to create function discovery: {}", e);

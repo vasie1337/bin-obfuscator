@@ -55,6 +55,12 @@ impl PeFile {
         bail!("No section found for RVA: 0x{:x}", rva)
     }
 
+    pub fn get_entry_point(&self) -> Result<usize> {
+        let pe = PE::parse(&self.buffer)
+            .context("Failed to parse PE file")?;
+        Ok(pe.entry)
+    }
+
     pub fn read(&self, rva: u64, size: u64) -> Result<Vec<u8>> {
         let offset = self.rva_to_offset(rva)?;
         let end_offset = offset + size;
