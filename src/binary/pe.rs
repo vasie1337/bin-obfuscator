@@ -5,6 +5,7 @@ pub struct PeFile {
     buffer: Vec<u8>,
 }
 
+#[allow(dead_code)]
 impl PeFile {
     pub fn new() -> Self {
         Self { buffer: Vec::new() }

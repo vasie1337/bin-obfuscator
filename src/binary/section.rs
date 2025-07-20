@@ -1,7 +1,8 @@
 use goblin::pe::PE;
 use anyhow::{Result, Context, bail};
 use super::pe::PeFile;
-
+    
+#[allow(dead_code)]
 pub trait SectionOperations {
     fn create_executable_section(&mut self, name: &str, size: u32) -> Result<(u64, u32)>;
     fn get_code_sections(&self) -> Result<Vec<(u64, u64)>>;
