@@ -4,14 +4,7 @@ use tracing::{error, info, warn, debug};
 use crate::binary::SectionOperations;
 use iced_x86::{Decoder, DecoderOptions, Instruction, Formatter, NasmFormatter, FlowControl, Mnemonic, OpKind};
 use std::collections::{HashSet, HashMap, VecDeque};
-
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct Function {
-    pub name: String,
-    pub start_rva: u64,
-    pub size: u64,
-}
+use crate::types::Function;
 
 pub struct FunctionDiscovery {
     pe_file: PeFile,
@@ -97,6 +90,9 @@ impl FunctionDiscovery {
             info!("Entry point: 0x{:x}", entry_point);
             self.add_function_candidate(entry_point, "EntryPoint".to_string());
         }
+
+        // TODO: add symbols from pdb if available
+        // TODO: add other sources of functions
 
         self.scan_for_call_targets()?;
 

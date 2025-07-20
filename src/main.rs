@@ -1,5 +1,6 @@
 mod binary;
 mod analysis;
+mod types;
 
 use binary::PeFile;
 use crate::analysis::FunctionDiscovery;
