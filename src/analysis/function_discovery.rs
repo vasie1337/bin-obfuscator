@@ -2,11 +2,13 @@ use crate::binary::pe::PeFile;
 use anyhow::Result;
 use tracing::{error, info, warn, debug};
 use crate::binary::SectionOperations;
-use iced_x86::{Decoder, DecoderOptions, Instruction, Formatter, FormatterOptions, NasmFormatter, FlowControl, Mnemonic, OpKind};
+use iced_x86::{Decoder, DecoderOptions, Instruction, Formatter, NasmFormatter, FlowControl, Mnemonic, OpKind};
 use std::collections::{HashSet, HashMap, VecDeque};
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Function {
+    pub name: String,
     pub start_rva: u64,
     pub size: u64,
 }
@@ -19,6 +21,7 @@ pub struct FunctionDiscovery {
     pending_analysis: VecDeque<u64>,
 }
 
+#[allow(dead_code)]
 impl FunctionDiscovery {
     pub fn new(pe_file: PeFile) -> Result<Self> {
         if !pe_file.is_loaded() {
@@ -49,9 +52,15 @@ impl FunctionDiscovery {
         
         self.finalize_function_boundaries();
 
-        self.print_statistics();
-        
         Ok(self.discovered_functions.values().cloned().collect())
+    }
+
+    pub fn get_functions(&self) -> &HashMap<u64, Function> {
+        &self.discovered_functions
+    }
+
+    pub fn get_function_at(&self, rva: u64) -> Option<&Function> {
+        self.discovered_functions.get(&rva)
     }
 
     fn merge_sections(&mut self) -> Result<()> {
@@ -89,12 +98,15 @@ impl FunctionDiscovery {
             self.add_function_candidate(entry_point, "EntryPoint".to_string());
         }
 
+        self.scan_for_call_targets()?;
+
         Ok(())
     }
 
     fn add_function_candidate(&mut self, rva: u64, name: String) {
         if !self.discovered_functions.contains_key(&rva) && self.is_valid_code_address(rva) {
             let function = Function {
+                name,
                 start_rva: rva,
                 size: 0,
             };
@@ -138,10 +150,10 @@ impl FunctionDiscovery {
             return Ok(());
         }
 
-        let mut decoder = Decoder::with_ip(64, &self.merged_sections[offset..], start_rva, DecoderOptions::NONE);
         let mut instruction = Instruction::default();
         let mut basic_block_queue = VecDeque::new();
         let mut visited_blocks = HashSet::new();
+        let mut visited_instructions = HashSet::<u64>::new();
         let mut call_targets = Vec::new();
         
         basic_block_queue.push_back(start_rva);
@@ -157,7 +169,7 @@ impl FunctionDiscovery {
                 continue;
             }
             
-            decoder = Decoder::with_ip(64, &self.merged_sections[block_offset..], block_start, DecoderOptions::NONE);
+            let mut decoder = Decoder::with_ip(64, &self.merged_sections[block_offset..], block_start, DecoderOptions::NONE);
 
             loop {
                 if !decoder.can_decode() {
@@ -166,6 +178,8 @@ impl FunctionDiscovery {
 
                 decoder.decode_out(&mut instruction);
                 let current_ip = instruction.ip();
+
+                visited_instructions.insert(current_ip);
 
                 debug!("0x{:x}: {}", current_ip, self.format_instruction(&instruction));
 
@@ -180,8 +194,13 @@ impl FunctionDiscovery {
                     }
                     FlowControl::UnconditionalBranch => {
                         if let Some(target) = self.get_branch_target(&instruction) {
-                            if self.is_valid_code_address(target) && !visited_blocks.contains(&target) {
-                                basic_block_queue.push_back(target);
+                            if self.is_valid_code_address(target) {
+                                debug!("Following unconditional branch (tail call) to 0x{:x}", target);
+                                let target_offset = (target - self.section_base_rva) as usize;
+                                if target_offset < self.merged_sections.len() && !visited_instructions.contains(&target) {
+                                    decoder = Decoder::with_ip(64, &self.merged_sections[target_offset..], target, DecoderOptions::NONE);
+                                    continue;
+                                }
                             }
                         }
                         break;
@@ -194,6 +213,7 @@ impl FunctionDiscovery {
                         }
                     }
                     FlowControl::Return => {
+                        debug!("Found return instruction at 0x{:x}, ending basic block", current_ip);
                         break;
                     }
                     _ => {
@@ -273,22 +293,31 @@ impl FunctionDiscovery {
         output
     }
 
-    pub fn get_functions(&self) -> &HashMap<u64, Function> {
-        &self.discovered_functions
-    }
-
-    pub fn get_function_at(&self, rva: u64) -> Option<&Function> {
-        self.discovered_functions.get(&rva)
-    }
-
-    pub fn print_statistics(&self) {
-        info!("Function Discovery Statistics:");
-        info!("  Total functions found: {}", self.discovered_functions.len());
-        let mut sorted_functions: Vec<_> = self.discovered_functions.keys().copied().collect();
-        sorted_functions.sort();
-
-        for rva in sorted_functions {
-            info!("Function at 0x{:x}: {:?}", rva, self.discovered_functions.get(&rva));
+    fn scan_for_call_targets(&mut self) -> Result<()> {
+        let mut candidates = Vec::new();
+        let merged_sections = self.merged_sections.clone();
+        let mut decoder = Decoder::new(64, &merged_sections, DecoderOptions::NONE);
+        let mut instruction = Instruction::default();
+        
+        while decoder.can_decode() {
+            decoder.decode_out(&mut instruction);
+            
+            if instruction.flow_control() == FlowControl::Call {
+                if let Some(target) = self.get_call_target(&instruction) {
+                    if self.is_valid_code_address(target) && !self.discovered_functions.contains_key(&target) {
+                        let name = format!("called_{:x}", target);
+                        candidates.push((target, name));
+                    }
+                }
+            }
         }
-    }   
+        
+        for (target, name) in candidates {
+            self.add_function_candidate(target, name);
+        }
+        
+        info!("Found {} call targets", self.discovered_functions.len());
+        Ok(())
+    }
+
 }

@@ -28,5 +28,8 @@ fn main() {
             return;
         }
     };
-    function_discovery.run();
+    let functions = function_discovery.run().unwrap();
+    for function in functions {
+        info!("Function at 0x{:x}: {:?}", function.start_rva, function);
+    }
 }
