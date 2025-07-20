@@ -4,14 +4,7 @@ use tracing::{error, info, warn, debug};
 use crate::binary::SectionOperations;
 use iced_x86::{Decoder, DecoderOptions, Instruction, Formatter, NasmFormatter, FlowControl, Mnemonic, OpKind};
 use std::collections::{HashSet, HashMap, VecDeque};
-
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct Function {
-    pub name: String,
-    pub start_rva: u64,
-    pub size: u64,
-}
+use crate::types::Function;
 
 pub struct FunctionDiscovery {
     pe_file: PeFile,
@@ -98,6 +91,9 @@ impl FunctionDiscovery {
             self.add_function_candidate(entry_point, "EntryPoint".to_string());
         }
 
+        // TODO: add symbols from pdb if available
+        // TODO: add other sources of functions
+
         self.scan_for_call_targets()?;
 
         Ok(())
@@ -109,6 +105,7 @@ impl FunctionDiscovery {
                 name,
                 start_rva: rva,
                 size: 0,
+                instructions: Vec::new(),
             };
             
             self.discovered_functions.insert(rva, function);
@@ -155,6 +152,7 @@ impl FunctionDiscovery {
         let mut visited_blocks = HashSet::new();
         let mut visited_instructions = HashSet::<u64>::new();
         let mut call_targets = Vec::new();
+        let mut function_instructions = Vec::new(); // Collect all instructions for this function
         
         basic_block_queue.push_back(start_rva);
 
@@ -179,7 +177,13 @@ impl FunctionDiscovery {
                 decoder.decode_out(&mut instruction);
                 let current_ip = instruction.ip();
 
+                if visited_instructions.contains(&current_ip) {
+                    break; // Avoid infinite loops
+                }
                 visited_instructions.insert(current_ip);
+
+                // Store a copy of the instruction for this function
+                function_instructions.push(instruction.clone());
 
                 debug!("0x{:x}: {}", current_ip, self.format_instruction(&instruction));
 
@@ -224,6 +228,14 @@ impl FunctionDiscovery {
                     break;
                 }
             }
+        }
+
+        // Update the function with collected instructions
+        if let Some(function) = self.discovered_functions.get_mut(&start_rva) {
+            // Sort instructions by their IP address to maintain proper order
+            function_instructions.sort_by_key(|instr| instr.ip());
+            function.instructions = function_instructions;
+            debug!("Populated {} instructions for function at 0x{:x}", function.instructions.len(), start_rva);
         }
 
         for (caller_ip, target) in call_targets {

@@ -1,9 +1,11 @@
 mod binary;
 mod analysis;
+mod types;
 
 use binary::PeFile;
 use crate::analysis::FunctionDiscovery;
 use tracing::{error, info};
+use iced_x86::{Formatter, NasmFormatter};
 
 fn main() {
     tracing_subscriber::fmt()
@@ -21,10 +23,24 @@ fn main() {
     }
     info!("PE file loaded");
 
+    let mut formatter = NasmFormatter::new();
+    let mut output = String::new();
+
     let mut function_discovery = FunctionDiscovery::new(pe_file).unwrap();
-    
     let functions = function_discovery.run().unwrap();
-    for function in functions {
-        info!("Function at 0x{:x}: {:?}", function.start_rva, function);
+    info!("Discovered {} functions", functions.len());
+
+    let main_function = functions.iter().find(|f| f.start_rva == 0x1100).unwrap();
+    info!("\n=== {} ===", main_function.name);
+    info!("Address: 0x{:x} - 0x{:x} (Size: {} bytes)", 
+          main_function.start_rva, 
+          main_function.start_rva + main_function.size, 
+          main_function.size);
+    info!("Instructions: {}", main_function.instructions.len());
+
+    for (_, instruction) in main_function.instructions.iter().enumerate() {
+        output.clear();
+        formatter.format(&instruction, &mut output);
+        info!("  0x{:08x}: {}", instruction.ip(), output);
     }
 }
