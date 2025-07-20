@@ -21,13 +21,8 @@ fn main() {
     }
     info!("PE file loaded");
 
-    let mut function_discovery = match FunctionDiscovery::new(pe_file) {
-        Ok(fd) => fd,
-        Err(e) => {
-            error!("Failed to create function discovery: {}", e);
-            return;
-        }
-    };
+    let mut function_discovery = FunctionDiscovery::new(pe_file).unwrap();
+    
     let functions = function_discovery.run().unwrap();
     for function in functions {
         info!("Function at 0x{:x}: {:?}", function.start_rva, function);
