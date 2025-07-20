@@ -38,7 +38,7 @@ fn main() {
           main_function.size);
     info!("Instructions: {}", main_function.instructions.len());
 
-    for (i, instruction) in main_function.instructions.iter().enumerate() {
+    for (_, instruction) in main_function.instructions.iter().enumerate() {
         output.clear();
         formatter.format(&instruction, &mut output);
         info!("  0x{:08x}: {}", instruction.ip(), output);
