@@ -90,6 +90,67 @@ impl CodeGenerator {
         Ok(())
     }
 
+    // Additional methods for opaque branches pass
+    pub fn add_and(&mut self, dst: AsmRegister64, src: AsmRegister64) -> Result<()> {
+        self.assembler.and(dst, src)
+            .map_err(|e| anyhow!("Failed to add AND: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_and_imm(&mut self, dst: AsmRegister64, imm: i32) -> Result<()> {
+        self.assembler.and(dst, imm)
+            .map_err(|e| anyhow!("Failed to add AND immediate: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_cmp(&mut self, dst: AsmRegister64, src: AsmRegister64) -> Result<()> {
+        self.assembler.cmp(dst, src)
+            .map_err(|e| anyhow!("Failed to add CMP: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_cmp_imm(&mut self, dst: AsmRegister64, imm: i32) -> Result<()> {
+        self.assembler.cmp(dst, imm)
+            .map_err(|e| anyhow!("Failed to add CMP immediate: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_imul(&mut self, dst: AsmRegister64, src: AsmRegister64) -> Result<()> {
+        self.assembler.imul_2(dst, src)
+            .map_err(|e| anyhow!("Failed to add IMUL: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_test(&mut self, dst: AsmRegister64, src: AsmRegister64) -> Result<()> {
+        self.assembler.test(dst, src)
+            .map_err(|e| anyhow!("Failed to add TEST: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_test_imm(&mut self, dst: AsmRegister64, imm: i32) -> Result<()> {
+        self.assembler.test(dst, imm)
+            .map_err(|e| anyhow!("Failed to add TEST immediate: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_je(&mut self, label: CodeLabel) -> Result<()> {
+        self.assembler.je(label)
+            .map_err(|e| anyhow!("Failed to add JE: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_jne(&mut self, label: CodeLabel) -> Result<()> {
+        self.assembler.jne(label)
+            .map_err(|e| anyhow!("Failed to add JNE: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_jge(&mut self, label: CodeLabel) -> Result<()> {
+        self.assembler.jge(label)
+            .map_err(|e| anyhow!("Failed to add JGE: {}", e))?;
+        Ok(())
+    }
+
     pub fn take_instructions(&mut self) -> Vec<Instruction> {
         self.assembler.take_instructions()
     }

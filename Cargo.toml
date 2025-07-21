@@ -9,3 +9,4 @@ tracing-subscriber = "0.3.19"
 goblin = "0.8"
 anyhow = "1.0"
 iced-x86 = { version = "1.21.0", features = ["code_asm"] }
+rand = "0.9.2"

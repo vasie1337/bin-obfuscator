@@ -1,5 +1,5 @@
 use crate::types::cfg::ControlFlowGraph;
-use crate::pipeline::passes::{TransformationPass, SubstitutionPass};
+use crate::pipeline::passes::{TransformationPass, SubstitutionPass, OpaqueBranchesPass};
 use anyhow::Result;
 use tracing::{info, debug, warn};
 
@@ -18,6 +18,7 @@ impl PipelineOrchestrator {
         let mut orchestrator = Self::new();
         
         orchestrator.add_pass(Box::new(SubstitutionPass::new(bitness)));
+        orchestrator.add_pass(Box::new(OpaqueBranchesPass::new(bitness)));
         
         // orchestrator.add_pass(Box::new(ControlFlowFlattening::new()));
         

@@ -10,5 +10,7 @@ pub trait TransformationPass {
 }
 
 pub mod substitution;
+pub mod opaque_branches;
 
 pub use substitution::SubstitutionPass;
+pub use opaque_branches::OpaqueBranchesPass;
