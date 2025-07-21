@@ -6,8 +6,8 @@ use iced_x86::{Decoder, DecoderOptions, Instruction, Formatter, NasmFormatter, F
 use std::collections::{HashSet, HashMap, VecDeque};
 use crate::types::Function;
 
-pub struct FunctionDiscovery {
-    pe_file: PeFile,
+pub struct FunctionDiscovery<'a> {
+    pe_file: &'a PeFile,
     merged_sections: Vec<u8>,
     section_base_rva: u64,
     discovered_functions: HashMap<u64, Function>,
@@ -15,8 +15,8 @@ pub struct FunctionDiscovery {
 }
 
 #[allow(dead_code)]
-impl FunctionDiscovery {
-    pub fn new(pe_file: PeFile) -> Result<Self> {
+impl<'a> FunctionDiscovery<'a> {
+    pub fn new(pe_file: &'a PeFile) -> Result<Self> {
         if !pe_file.is_loaded() {
             error!("PE file not loaded");
             return Err(anyhow::anyhow!("PE file not loaded"));
