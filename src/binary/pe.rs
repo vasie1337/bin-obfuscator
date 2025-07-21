@@ -3,6 +3,8 @@ use anyhow::{Result, Context, bail};
 use tracing::{info, debug, warn, error};
 use std::path::{Path, PathBuf};
 
+use crate::binary::SectionOperations;
+
 pub struct PeFile {
     buffer: Vec<u8>,
     loaded: bool,
@@ -180,5 +182,11 @@ pub fn save_to_disk(pe_file: &PeFile, path: &Path) -> Result<()> {
         .with_context(|| format!("Failed to write file: {}", path.display()))?;
     
     info!("PE file saved successfully to: {}", path.display());
+    Ok(())
+}
+
+pub fn patch_with_new_code(pe_file: &mut PeFile, new_code: &[u8]) -> Result<()> {
+    let (new_section_rva, _) = pe_file.create_executable_section(".test", new_code.len() as u32)?;
+    pe_file.write(new_section_rva as u64, new_code)?;
     Ok(())
 }
