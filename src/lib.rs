@@ -27,8 +27,26 @@ pub fn run_obfuscation<P: AsRef<Path>>(
     info!("[3/7] Lifting machine code to IR...");
     let ir = lifter::ir_builder::lift(&pe_file, &functions)?;
 
+    // Print ir
+    for function in &ir {
+        for block in &function.blocks {
+            for instruction in &block.1.instructions {
+                info!("{}", instruction);
+            }
+        }
+    }
+
     info!("[4/7] Running obfuscation pipeline...");
     let _obfuscated_ir = pipeline::orchestrator::run(pe_file.get_bitness()?, ir);
+
+    // Print ir after obfuscation
+    for function in &_obfuscated_ir {
+        for block in &function.blocks {
+            for instruction in &block.1.instructions {
+                info!("{}", instruction);
+            }
+        }
+    }
 
     // TODO: Implement this later
     //info!("[5/7] Lowering IR back to machine code...");

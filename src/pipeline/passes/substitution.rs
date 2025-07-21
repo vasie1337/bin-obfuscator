@@ -35,6 +35,13 @@ impl SubstitutionPass {
             }
         }
     }
+
+    fn should_substitute(&self, instruction: &Instruction) -> bool {
+        match instruction.mnemonic() {
+            Mnemonic::Mov => true,
+            _ => false,
+        }
+    }
 }
 
 impl TransformationPass for SubstitutionPass {
@@ -53,16 +60,20 @@ impl TransformationPass for SubstitutionPass {
             let mut new_instructions = Vec::new();
             
             for instruction in &block.instructions {
-                match self.substitute_instruction(instruction) {
-                    Ok(substituted) => {
-                        new_instructions.extend(substituted);
-                        substitutions_made += 1;
-                        debug!("Substituted instruction: {:?}", instruction);
+                if self.should_substitute(instruction) {
+                    match self.substitute_instruction(instruction) {
+                        Ok(substituted) => {
+                            new_instructions.extend(substituted);
+                            substitutions_made += 1;
+                            debug!("Substituted instruction: {:?}", instruction);
+                        }
+                        Err(e) => {
+                            warn!("Failed to substitute instruction {:?}: {}", instruction, e);
+                            new_instructions.push(*instruction);
+                        }
                     }
-                    Err(e) => {
-                        warn!("Failed to substitute instruction {:?}: {}", instruction, e);
-                        new_instructions.push(*instruction);
-                    }
+                } else {
+                    new_instructions.push(*instruction);
                 }
             }
             
