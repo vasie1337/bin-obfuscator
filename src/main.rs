@@ -13,13 +13,12 @@ fn main() {
     let input_path = "C:\\Users\\vasie\\Documents\\GitHub\\bin-obfuscator\\testdata\\test.exe";
     let output_path = "C:\\Users\\vasie\\Documents\\GitHub\\bin-obfuscator\\testdata\\test_obfuscated.exe";
 
-    info!("Starting obfuscation process...");
     match run_obfuscation(input_path, output_path) {
         Ok(()) => {
-            info!("Obfuscation completed successfully!");
+            info!("Done.");
         }
         Err(e) => {
-            error!("Obfuscation failed: {}", e);
+            error!("Error: {}", e);
         }
     }
 }

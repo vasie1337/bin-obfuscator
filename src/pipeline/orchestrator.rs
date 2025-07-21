@@ -1,4 +1,4 @@
-use crate::types::ControlFlowGraph;
+use crate::types::cfg::ControlFlowGraph;
 use crate::pipeline::passes::{TransformationPass, SubstitutionPass};
 use anyhow::Result;
 use tracing::{info, debug, warn};

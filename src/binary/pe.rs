@@ -4,7 +4,7 @@ use tracing::{info, debug, warn, error};
 use std::path::{Path, PathBuf};
 
 use crate::binary::SectionOperations;
-use crate::types::{ControlFlowGraph, Function};
+use crate::types::{ControlFlowGraph};
 
 pub struct PeFile {
     buffer: Vec<u8>,

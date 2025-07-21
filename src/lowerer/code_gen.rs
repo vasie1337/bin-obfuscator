@@ -1,6 +1,6 @@
 use iced_x86::{code_asm::*, Instruction, BlockEncoder, BlockEncoderOptions, InstructionBlock};
 use anyhow::{Result, anyhow};
-use crate::types::ControlFlowGraph;
+use crate::types::cfg::ControlFlowGraph;
 
 pub struct CodeGenerator {
     assembler: CodeAssembler,
