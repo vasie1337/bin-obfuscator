@@ -77,6 +77,18 @@ impl PeFile {
         Ok(entry_point)
     }
 
+    pub fn get_bitness(&self) -> Result<u32> {
+        debug!("Retrieving bitness from PE header");
+        
+        let pe = PE::parse(&self.buffer)
+            .context("Failed to parse PE file")?;
+        
+        let is_64 = pe.is_64;
+        let bitness = if is_64 { 64 } else { 32 };
+        debug!("Bitness: {}", bitness);
+        Ok(bitness)
+    }
+
     pub fn read(&self, rva: u64, size: u64) -> Result<Vec<u8>> {
         debug!("Reading {} bytes from RVA 0x{:x}", size, rva);
         
@@ -126,7 +138,6 @@ impl PeFile {
     }
 }
 
-
 pub fn load_from_disk(path: &Path) -> Result<PeFile> {
     info!("Loading PE file from: {}", path.display());
     
@@ -151,14 +162,13 @@ pub fn load_from_disk(path: &Path) -> Result<PeFile> {
                        section.virtual_address,
                        section.virtual_size);
             }
+            info!("Loaded {} bit PE file", if pe.is_64 { "64" } else { "32" });
         }
         Err(e) => {
             error!("Invalid PE file format: {}", e);
             return Err(e.into());
         }
     }
-    
-    info!("PE file loaded successfully");
     Ok(PeFile { buffer, loaded: true, path: Some(path.to_path_buf()) })
 }
 

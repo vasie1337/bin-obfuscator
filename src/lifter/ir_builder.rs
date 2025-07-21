@@ -4,24 +4,6 @@ use std::collections::HashSet;
 use anyhow::Result;
 use tracing::{info, debug, warn, error};
 
-// Public convenience function for lifting
-pub fn lift(
-    _pe_file: &crate::binary::pe::PeFile,
-    functions: &[Function]
-) -> Result<Vec<ControlFlowGraph>> {
-    let mut cfgs = Vec::new();
-    
-    for function in functions {
-        let mut builder = IrBuilder::new(function.clone());
-        builder.build()?;
-        let cfg = builder.into_cfg();
-        cfgs.push(cfg);
-    }
-    
-    info!("Lifted {} functions to IR", cfgs.len());
-    Ok(cfgs)
-}
-
 pub struct IrBuilder {
     function: Function,
     cfg: ControlFlowGraph,
@@ -30,7 +12,7 @@ pub struct IrBuilder {
 
 impl IrBuilder {
     pub fn new(function: Function) -> Self {
-        info!("Creating IR builder for function: {} (0x{:x})", function.name, function.start_rva);
+        info!("Creating IR builder for function: {} (0x{:x})", function.name, function.rva);
         debug!("Function has {} instructions", function.instructions.len());
         Self {
             function,
@@ -363,4 +345,21 @@ impl IrBuilder {
         
         target
     }
+}
+
+pub fn lift(
+    _pe_file: &crate::binary::pe::PeFile,
+    functions: &[Function]
+) -> Result<Vec<ControlFlowGraph>> {
+    let mut cfgs = Vec::new();
+    
+    for function in functions {
+        let mut builder = IrBuilder::new(function.clone());
+        builder.build()?;
+        let cfg = builder.into_cfg();
+        cfgs.push(cfg);
+    }
+    
+    info!("Lifted {} functions to IR", cfgs.len());
+    Ok(cfgs)
 }
