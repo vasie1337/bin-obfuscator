@@ -12,16 +12,17 @@ pub fn run_obfuscation<P: AsRef<Path>>(
     output_path: P,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("[1/7] Loading {:?}...", input_path.as_ref());
-    let mut pe_file = binary::pe::load_from_disk(input_path.as_ref())?;
+    let pe_file = binary::pe::load_from_disk(input_path.as_ref())?;
         
     println!("[2/7] Analyzing functions and control flow...");
-    let analysis_data = analysis::function_discovery::run(&pe_file)?;
+    let mut discovery = analysis::function_discovery::FunctionDiscovery::new(&pe_file)?;
+    let analysis_data = discovery.run()?;
 
     println!("[3/7] Lifting machine code to IR...");
     let ir = lifter::ir_builder::lift(&pe_file, &analysis_data)?;
 
     println!("[4/7] Running obfuscation pipeline...");
-    let obfuscated_ir = pipeline::orchestrator::run(ir);
+    let _obfuscated_ir = pipeline::orchestrator::run(ir);
 
     // TODO: Implement this later
     //println!("[5/7] Lowering IR back to machine code...");

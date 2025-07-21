@@ -4,6 +4,24 @@ use std::collections::HashSet;
 use anyhow::Result;
 use tracing::{info, debug, warn, error};
 
+// Public convenience function for lifting
+pub fn lift(
+    _pe_file: &crate::binary::pe::PeFile,
+    functions: &[Function]
+) -> Result<Vec<ControlFlowGraph>> {
+    let mut cfgs = Vec::new();
+    
+    for function in functions {
+        let mut builder = IrBuilder::new(function.clone());
+        builder.build()?;
+        let cfg = builder.into_cfg();
+        cfgs.push(cfg);
+    }
+    
+    info!("Lifted {} functions to IR", cfgs.len());
+    Ok(cfgs)
+}
+
 pub struct IrBuilder {
     function: Function,
     cfg: ControlFlowGraph,
@@ -54,6 +72,10 @@ impl IrBuilder {
 
     pub fn get_cfg(&self) -> &ControlFlowGraph {
         &self.cfg
+    }
+
+    pub fn into_cfg(self) -> ControlFlowGraph {
+        self.cfg
     }
 
     fn identify_basic_block_leaders(&mut self) -> Result<()> {
