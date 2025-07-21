@@ -1,5 +1,6 @@
-use iced_x86::{code_asm::*, Instruction};
+use iced_x86::{code_asm::*, Instruction, BlockEncoder, BlockEncoderOptions, InstructionBlock};
 use anyhow::{Result, anyhow};
+use crate::types::ControlFlowGraph;
 
 pub struct CodeGenerator {
     assembler: CodeAssembler,
@@ -49,9 +50,21 @@ impl CodeGenerator {
         Ok(())
     }
 
+    pub fn add_or(&mut self, dst: AsmRegister64, src: AsmRegister64) -> Result<()> {
+        self.assembler.or(dst, src)
+            .map_err(|e| anyhow!("Failed to add OR: {}", e))?;
+        Ok(())
+    }
+
     pub fn add_add(&mut self, dst: AsmRegister64, src: AsmRegister64) -> Result<()> {
         self.assembler.add(dst, src)
             .map_err(|e| anyhow!("Failed to add ADD: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_add_imm(&mut self, dst: AsmRegister64, imm: i32) -> Result<()> {
+        self.assembler.add(dst, imm)
+            .map_err(|e| anyhow!("Failed to add ADD immediate: {}", e))?;
         Ok(())
     }
 
@@ -92,5 +105,35 @@ impl CodeGenerator {
 
     pub fn clear(&mut self) {
         let _ = self.assembler.take_instructions();
+    }
+}
+
+pub fn lower(ir: &Vec<ControlFlowGraph>, new_section_rva: u64) -> Result<Vec<u8>> {
+    let mut all_instructions = Vec::new();
+    
+    for cfg in ir {
+        let mut block_ids: Vec<_> = cfg.blocks.keys().cloned().collect();
+        block_ids.sort();
+        
+        for block_id in block_ids {
+            if let Some(basic_block) = cfg.blocks.get(&block_id) {
+                for instruction in &basic_block.instructions {
+                    all_instructions.push(*instruction);
+                }
+            }
+        }
+    }
+    
+    if all_instructions.is_empty() {
+        return Ok(Vec::new());
+    }
+    
+    let instruction_block = InstructionBlock::new(&all_instructions, new_section_rva);
+    
+    let encoder_options = BlockEncoderOptions::NONE;
+    
+    match BlockEncoder::encode(64, instruction_block, encoder_options) {
+        Ok(block_encoder_result) => Ok(block_encoder_result.code_buffer),
+        Err(e) => Err(anyhow!("Failed to encode instructions: {}", e)),
     }
 }

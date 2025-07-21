@@ -3,6 +3,9 @@ use anyhow::{Result, Context, bail};
 use tracing::{info, debug, warn, error};
 use std::path::{Path, PathBuf};
 
+use crate::binary::SectionOperations;
+use crate::types::{ControlFlowGraph, Function};
+
 pub struct PeFile {
     buffer: Vec<u8>,
     loaded: bool,
@@ -129,6 +132,24 @@ impl PeFile {
         Ok(())
     }
 
+    pub fn patch_jmp(&mut self, rva: u64, dest_rva: u64) -> Result<()> {
+        let relative_offset = (dest_rva as i64) - ((rva + 5) as i64);
+
+        let rel32 = relative_offset as i32;
+
+        let mut jmp_bytes = [0u8; 5];
+        jmp_bytes[0] = 0xE9;
+        jmp_bytes[1..].copy_from_slice(&rel32.to_le_bytes());
+
+        self.write(rva, &jmp_bytes)?;
+
+        debug!(
+            "Patched JMP at 0x{:x} to 0x{:x} (rel_offset: 0x{:x})",
+            rva, dest_rva, rel32
+        );
+        Ok(())
+    }
+
     pub fn is_loaded(&self) -> bool {
         self.loaded
     }
@@ -180,5 +201,25 @@ pub fn save_to_disk(pe_file: &PeFile, path: &Path) -> Result<()> {
         .with_context(|| format!("Failed to write file: {}", path.display()))?;
     
     info!("PE file saved successfully to: {}", path.display());
+    Ok(())
+}
+
+pub fn patch_with_new_code(pe_file: &mut PeFile, new_code: &[u8]) -> Result<()> {
+    let (new_section_rva, _) = pe_file.create_executable_section(".test", new_code.len() as u32)?;
+    pe_file.write(new_section_rva as u64, new_code)?;
+    Ok(())
+}
+
+pub fn fix_calls(pe_file: &mut PeFile, ir: &Vec<ControlFlowGraph>, obfuscated_ir: &Vec<ControlFlowGraph>) -> Result<()> {
+    for (old_function, new_function) in ir.iter().zip(obfuscated_ir.iter()) {
+        let old_function_entry = old_function.get_entry_rva();
+        let new_function_entry = new_function.get_entry_rva();
+
+        assert!(old_function_entry != new_function_entry, "Old and new function entries must be different");
+
+        if let (Some(old_function_entry), Some(new_function_entry)) = (old_function_entry, new_function_entry) {
+            pe_file.patch_jmp(old_function_entry, new_function_entry)?;
+        }
+    }
     Ok(())
 }
