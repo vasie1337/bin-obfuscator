@@ -1,11 +1,12 @@
 use goblin::pe::PE;
 use anyhow::{Result, Context, bail};
 use tracing::{info, debug, warn, error};
+use std::path::{Path, PathBuf};
 
 pub struct PeFile {
     buffer: Vec<u8>,
     loaded: bool,
-    path: Option<String>,
+    path: Option<PathBuf>,
 }
 
 #[allow(dead_code)]
@@ -13,55 +14,6 @@ impl PeFile {
     pub fn new() -> Self {
         debug!("Creating new PeFile instance");
         Self { buffer: Vec::new(), loaded: false, path: None }
-    }
-
-    pub fn load(&mut self, path: &str) -> Result<()> {
-        info!("Loading PE file from: {}", path);
-        
-        let file_size = std::fs::metadata(path)
-            .with_context(|| format!("Failed to get metadata for file: {}", path))?
-            .len();
-        debug!("File size: {} bytes", file_size);
-        
-        self.buffer = std::fs::read(path)
-            .with_context(|| format!("Failed to read file: {}", path))?;
-        
-        debug!("Successfully read {} bytes from file", self.buffer.len());
-        
-        // Validate that it's a PE file
-        match PE::parse(&self.buffer) {
-            Ok(pe) => {
-                debug!("PE file validation successful - entry point: 0x{:x}", pe.entry);
-                debug!("Number of sections: {}", pe.sections.len());
-                for (i, section) in pe.sections.iter().enumerate() {
-                    debug!("Section {}: {} (VA: 0x{:x}, size: 0x{:x})", 
-                           i, 
-                           String::from_utf8_lossy(&section.name),
-                           section.virtual_address,
-                           section.virtual_size);
-                }
-            }
-            Err(e) => {
-                error!("Invalid PE file format: {}", e);
-                return Err(e.into());
-            }
-        }
-        
-        self.loaded = true;
-        self.path = Some(path.to_string());
-        info!("PE file loaded successfully");
-        Ok(())
-    }
-
-    pub fn save(&self, path: &str) -> Result<()> {
-        info!("Saving PE file to: {}", path);
-        debug!("Buffer size to write: {} bytes", self.buffer.len());
-        
-        std::fs::write(path, &self.buffer)
-            .with_context(|| format!("Failed to write file: {}", path))?;
-        
-        info!("PE file saved successfully to: {}", path);
-        Ok(())
     }
 
     pub fn buffer(&self) -> &[u8] {
@@ -169,7 +121,54 @@ impl PeFile {
         self.loaded
     }
 
-    pub fn get_path(&self) -> Option<&str> {
+    pub fn get_path(&self) -> Option<&Path> {
         self.path.as_deref()
     }
+}
+
+
+pub fn load_from_disk(path: &Path) -> Result<PeFile> {
+    info!("Loading PE file from: {}", path.display());
+    
+    let file_size = std::fs::metadata(path)
+        .with_context(|| format!("Failed to get metadata for file: {}", path.display()))?
+        .len();
+    debug!("File size: {} bytes", file_size);
+    
+    let buffer = std::fs::read(path)
+        .with_context(|| format!("Failed to read file: {}", path.display()))?;
+    
+    debug!("Successfully read {} bytes from file", buffer.len());
+    
+    match PE::parse(&buffer) {
+        Ok(pe) => {
+            debug!("PE file validation successful - entry point: 0x{:x}", pe.entry);
+            debug!("Number of sections: {}", pe.sections.len());
+            for (i, section) in pe.sections.iter().enumerate() {
+                debug!("Section {}: {} (VA: 0x{:x}, size: 0x{:x})", 
+                       i, 
+                       String::from_utf8_lossy(&section.name),
+                       section.virtual_address,
+                       section.virtual_size);
+            }
+        }
+        Err(e) => {
+            error!("Invalid PE file format: {}", e);
+            return Err(e.into());
+        }
+    }
+    
+    info!("PE file loaded successfully");
+    Ok(PeFile { buffer, loaded: true, path: Some(path.to_path_buf()) })
+}
+
+pub fn save_to_disk(pe_file: &PeFile, path: &Path) -> Result<()> {
+    info!("Saving PE file to: {}", path.display());
+    debug!("Buffer size to write: {} bytes", pe_file.buffer.len());
+    
+        std::fs::write(path, &pe_file.buffer)
+        .with_context(|| format!("Failed to write file: {}", path.display()))?;
+    
+    info!("PE file saved successfully to: {}", path.display());
+    Ok(())
 }
