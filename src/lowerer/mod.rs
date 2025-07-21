@@ -1,1 +1,1 @@
-mod code_gen;
+pub mod code_gen;
