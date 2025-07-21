@@ -8,9 +8,11 @@ use crate::analysis::FunctionDiscovery;
 use crate::lifter::IrBuilder;
 use tracing::{error, info};
 use iced_x86::{Formatter, NasmFormatter};
-use crate::lifter::ControlFlowGraph;
+use crate::types::ControlFlowGraph;
 
-fn display_flow_graph(cfg: &ControlFlowGraph, formatter: &mut NasmFormatter) {
+fn display_flow_graph(cfg: &ControlFlowGraph) {
+    let mut formatter = NasmFormatter::new();
+
     let mut sorted_blocks: Vec<_> = cfg.blocks.iter().collect();
     sorted_blocks.sort_by_key(|(block_id, _)| *block_id);
     
@@ -48,8 +50,6 @@ fn main() {
     }
     info!("PE file loaded");
 
-    let mut formatter = NasmFormatter::new();
-
     let mut function_discovery = FunctionDiscovery::new(pe_file).unwrap();
     let functions = function_discovery.run().unwrap();
     info!("Discovered {} functions", functions.len());
@@ -62,7 +62,7 @@ fn main() {
             let cfg = ir_builder.get_cfg();
             info!("Successfully built CFG with {} basic blocks", cfg.blocks.len());
             
-            display_flow_graph(&cfg, &mut formatter);
+            display_flow_graph(&cfg);
         }
         Err(e) => {
             error!("Failed to build IR: {}", e);
