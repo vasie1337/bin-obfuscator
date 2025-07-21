@@ -104,12 +104,12 @@ impl PipelineOrchestrator {
     }
 }
 
-pub fn run(bitness: u32, ir: Vec<ControlFlowGraph>) -> Vec<ControlFlowGraph> {
+pub fn run(bitness: u32, ir: &Vec<ControlFlowGraph>) -> Vec<ControlFlowGraph> {
     info!("Running obfuscation pipeline on {} functions", ir.len());
     
     let orchestrator = PipelineOrchestrator::default_pipeline(bitness);
     
-    let mut mutable_ir = ir;
+    let mut mutable_ir = ir.clone();
     
     match orchestrator.run_all(&mut mutable_ir) {
         Ok(()) => {

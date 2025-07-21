@@ -19,9 +19,6 @@ impl SubstitutionPass {
     fn substitute_mov(&self, instruction: &Instruction, code_gen: &mut CodeGenerator) -> Result<Vec<Instruction>> {
         debug!("Substituting MOV instruction: {:?}", instruction);
         
-        code_gen.add_xor(rax, rax)?;
-        code_gen.add_add(rax, rbx)?;
-        
         Ok(code_gen.take_instructions())
     }
 
