@@ -15,11 +15,16 @@ pub fn run_obfuscation<P: AsRef<Path>>(
     let pe_file = binary::pe::load_from_disk(input_path.as_ref())?;
         
     println!("[2/7] Analyzing functions and control flow...");
-    let mut discovery = analysis::function_discovery::FunctionDiscovery::new(&pe_file)?;
-    let analysis_data = discovery.run()?;
+    let mut functions = analysis::function_discovery::analyze_binary(&pe_file)?;
+
+    {
+        // Filter out all functions except the main function
+        let main_function = functions.iter().find(|f| f.rva == 0x1100).unwrap();
+        functions = functions.iter().filter(|f| f.rva == main_function.rva).cloned().collect();
+    }
 
     println!("[3/7] Lifting machine code to IR...");
-    let ir = lifter::ir_builder::lift(&pe_file, &analysis_data)?;
+    let ir = lifter::ir_builder::lift(&pe_file, &functions)?;
 
     println!("[4/7] Running obfuscation pipeline...");
     let _obfuscated_ir = pipeline::orchestrator::run(ir);
@@ -27,7 +32,7 @@ pub fn run_obfuscation<P: AsRef<Path>>(
     // TODO: Implement this later
     //println!("[5/7] Lowering IR back to machine code...");
     //let new_code = lowerer::code_gen::lower(&obfuscated_ir)?;
-//
+
     //println!("[6/7] Creating new section and patching binary...");
     //binary::pe::patch_with_new_code(&mut pe_file, &new_code)?;
 

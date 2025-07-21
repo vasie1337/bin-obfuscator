@@ -126,7 +126,6 @@ impl PeFile {
     }
 }
 
-
 pub fn load_from_disk(path: &Path) -> Result<PeFile> {
     info!("Loading PE file from: {}", path.display());
     

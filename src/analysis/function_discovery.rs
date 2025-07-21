@@ -6,7 +6,7 @@ use iced_x86::{Decoder, DecoderOptions, Instruction, Formatter, NasmFormatter, F
 use std::collections::{HashSet, HashMap, VecDeque};
 use crate::types::Function;
 
-pub struct FunctionDiscovery<'a> {
+struct FunctionDiscovery<'a> {
     pe_file: &'a PeFile,
     merged_sections: Vec<u8>,
     section_base_rva: u64,
@@ -16,7 +16,7 @@ pub struct FunctionDiscovery<'a> {
 
 #[allow(dead_code)]
 impl<'a> FunctionDiscovery<'a> {
-    pub fn new(pe_file: &'a PeFile) -> Result<Self> {
+    fn new(pe_file: &'a PeFile) -> Result<Self> {
         if !pe_file.is_loaded() {
             error!("PE file not loaded");
             return Err(anyhow::anyhow!("PE file not loaded"));
@@ -30,7 +30,7 @@ impl<'a> FunctionDiscovery<'a> {
         })
     }
 
-    pub fn run(&mut self) -> Result<Vec<Function>> {
+    fn run(&mut self) -> Result<Vec<Function>> {
         let sections = self.pe_file.get_code_sections()
             .map_err(|e| anyhow::anyhow!("Failed to get code sections: {}", e))?;
         
@@ -48,11 +48,11 @@ impl<'a> FunctionDiscovery<'a> {
         Ok(self.discovered_functions.values().cloned().collect())
     }
 
-    pub fn get_functions(&self) -> &HashMap<u64, Function> {
+    fn get_functions(&self) -> &HashMap<u64, Function> {
         &self.discovered_functions
     }
 
-    pub fn get_function_at(&self, rva: u64) -> Option<&Function> {
+    fn get_function_at(&self, rva: u64) -> Option<&Function> {
         self.discovered_functions.get(&rva)
     }
 
@@ -324,4 +324,9 @@ impl<'a> FunctionDiscovery<'a> {
         Ok(())
     }
 
+}
+
+pub fn analyze_binary(pe_file: &PeFile) -> Result<Vec<Function>> {
+    let mut discovery = FunctionDiscovery::new(pe_file)?;
+    discovery.run()
 }
