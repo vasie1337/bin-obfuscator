@@ -8,3 +8,9 @@ pub struct Function {
     pub size: u64,
     pub instructions: Vec<Instruction>,
 }
+
+impl Function {
+    pub fn new(name: String, start_rva: u64) -> Self {
+        Self { name, start_rva, size: 0, instructions: Vec::new() }
+    }
+}

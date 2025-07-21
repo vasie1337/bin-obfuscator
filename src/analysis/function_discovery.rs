@@ -101,12 +101,7 @@ impl FunctionDiscovery {
 
     fn add_function_candidate(&mut self, rva: u64, name: String) {
         if !self.discovered_functions.contains_key(&rva) && self.is_valid_code_address(rva) {
-            let function = Function {
-                name,
-                start_rva: rva,
-                size: 0,
-                instructions: Vec::new(),
-            };
+            let function = Function::new(name, rva);
             
             self.discovered_functions.insert(rva, function);
             self.pending_analysis.push_back(rva);
@@ -152,7 +147,7 @@ impl FunctionDiscovery {
         let mut visited_blocks = HashSet::new();
         let mut visited_instructions = HashSet::<u64>::new();
         let mut call_targets = Vec::new();
-        let mut function_instructions = Vec::new(); // Collect all instructions for this function
+        let mut function_instructions = Vec::new();
         
         basic_block_queue.push_back(start_rva);
 
@@ -178,11 +173,10 @@ impl FunctionDiscovery {
                 let current_ip = instruction.ip();
 
                 if visited_instructions.contains(&current_ip) {
-                    break; // Avoid infinite loops
+                    break;
                 }
                 visited_instructions.insert(current_ip);
 
-                // Store a copy of the instruction for this function
                 function_instructions.push(instruction.clone());
 
                 debug!("0x{:x}: {}", current_ip, self.format_instruction(&instruction));
@@ -230,9 +224,7 @@ impl FunctionDiscovery {
             }
         }
 
-        // Update the function with collected instructions
         if let Some(function) = self.discovered_functions.get_mut(&start_rva) {
-            // Sort instructions by their IP address to maintain proper order
             function_instructions.sort_by_key(|instr| instr.ip());
             function.instructions = function_instructions;
             debug!("Populated {} instructions for function at 0x{:x}", function.instructions.len(), start_rva);

@@ -1,2 +1,3 @@
-mod control_flow;
-mod ir_builder;
+pub mod ir_builder;
+
+pub use ir_builder::{IrBuilder};
