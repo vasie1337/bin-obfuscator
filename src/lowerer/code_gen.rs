@@ -50,9 +50,21 @@ impl CodeGenerator {
         Ok(())
     }
 
+    pub fn add_or(&mut self, dst: AsmRegister64, src: AsmRegister64) -> Result<()> {
+        self.assembler.or(dst, src)
+            .map_err(|e| anyhow!("Failed to add OR: {}", e))?;
+        Ok(())
+    }
+
     pub fn add_add(&mut self, dst: AsmRegister64, src: AsmRegister64) -> Result<()> {
         self.assembler.add(dst, src)
             .map_err(|e| anyhow!("Failed to add ADD: {}", e))?;
+        Ok(())
+    }
+
+    pub fn add_add_imm(&mut self, dst: AsmRegister64, imm: i32) -> Result<()> {
+        self.assembler.add(dst, imm)
+            .map_err(|e| anyhow!("Failed to add ADD immediate: {}", e))?;
         Ok(())
     }
 
