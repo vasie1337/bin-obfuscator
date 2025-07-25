@@ -1,5 +1,5 @@
 [package]
-name = "bin-obfuscator"
+name = "bin-obfuscator-core"
 version = "0.1.0"
 edition = "2024"
 
