@@ -1,12 +1,27 @@
 use env_logger::{Builder, Target};
 use log::LevelFilter;
 use std::io::Write;
+use std::sync::Once;
+
+static INIT: Once = Once::new();
 
 pub struct Logger;
 
 impl Logger {
     pub fn init() -> Result<(), log::SetLoggerError> {
         Self::init_with_level(LevelFilter::Info)
+    }
+
+    pub fn ensure_init() {
+        INIT.call_once(|| {
+            let _ = Self::init();
+        });
+    }
+
+    pub fn ensure_init_with_level(level: LevelFilter) {
+        INIT.call_once(|| {
+            let _ = Self::init_with_level(level);
+        });
     }
 
     pub fn init_with_level(level: LevelFilter) -> Result<(), log::SetLoggerError> {
@@ -18,17 +33,15 @@ impl Logger {
             .format(|buf, record| {
                 let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
                 
-                // Extract crate name from file path
                 let file_path = record.file().unwrap_or("unknown");
                 let crate_name = Self::extract_crate_name(file_path);
                 
-                // Color codes for different log levels
                 let (level_color, reset) = match record.level() {
-                    log::Level::Error => ("\x1b[31m", "\x1b[0m"), // Red
-                    log::Level::Warn => ("\x1b[33m", "\x1b[0m"),  // Yellow
-                    log::Level::Info => ("\x1b[32m", "\x1b[0m"),  // Green
-                    log::Level::Debug => ("\x1b[36m", "\x1b[0m"), // Cyan
-                    log::Level::Trace => ("\x1b[35m", "\x1b[0m"), // Magenta
+                    log::Level::Error => ("\x1b[31m", "\x1b[0m"),
+                    log::Level::Warn => ("\x1b[33m", "\x1b[0m"),
+                    log::Level::Info => ("\x1b[32m", "\x1b[0m"),
+                    log::Level::Debug => ("\x1b[36m", "\x1b[0m"),
+                    log::Level::Trace => ("\x1b[35m", "\x1b[0m"),
                 };
                 
                 writeln!(
@@ -90,19 +103,15 @@ impl Logger {
         log::log_enabled!(level)
     }
     
-    /// Extract crate name from file path
     fn extract_crate_name(file_path: &str) -> &str {
-        // Handle different path separators (Windows/Unix)
         let path_parts: Vec<&str> = file_path.split(['/', '\\']).collect();
         
-        // Look for crates directory structure
         if let Some(crates_index) = path_parts.iter().position(|&part| part == "crates") {
             if crates_index + 1 < path_parts.len() {
                 return path_parts[crates_index + 1];
             }
         }
         
-        // Fallback: try to get from the beginning of the path
         if path_parts.len() >= 2 {
             path_parts[path_parts.len() - 2]
         } else {
