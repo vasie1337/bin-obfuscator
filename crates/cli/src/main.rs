@@ -1,3 +1,6 @@
-pub fn main() {
-    println!("Hello, world!");
+use common::{Logger, info};
+
+fn main() {
+    Logger::init().unwrap();
+    info!("Starting the binary obfuscator");
 }
