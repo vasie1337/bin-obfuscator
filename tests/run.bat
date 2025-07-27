@@ -1,0 +1,1 @@
+cargo run --release --bin bin-obfuscator -- data\login-program.exe data\login-program.pdb -o ..\test-output\login-program.exe
