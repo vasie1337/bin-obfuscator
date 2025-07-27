@@ -22,7 +22,6 @@ fn load_file(path: &Path) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
 }
 
 fn save_file(path: &Path, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
-    // Create parent directory if it doesn't exist
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create output directory '{}': {}", parent.display(), e))?;
