@@ -1,4 +1,4 @@
-use common::{debug, error, Logger};
+use common::{error, info, Logger};
 use parsers::pe::PEContext;
 use parsers::pdb::PDBContext;
 
@@ -25,7 +25,7 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
 
     let functions = pdb_context.get_functions().unwrap();
     for function in functions {
-        debug!("Function: {} - RVA: {} - Size: {}", function.name, function.rva, function.size);
+        info!("Function: {} - RVA: {} - Size: {}", function.name, function.rva, function.size);
     }
 
     // TODO: Implement obfuscation
