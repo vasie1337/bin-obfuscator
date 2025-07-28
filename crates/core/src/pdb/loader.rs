@@ -1,6 +1,6 @@
 use crate::pdb::PDBContext;
 use crate::types::Function;
-
+use common::{debug, info};
 use symbolic::common::Name;
 use symbolic::demangle::{Demangle, DemangleOptions};
 use symbolic::debuginfo::pdb::PdbObject;
@@ -16,12 +16,13 @@ impl PDBContext {
 
     pub fn load(&self) -> Result<(), String> {
         if self.functions.borrow().is_some() {
+            debug!("PDB already loaded");
             return Ok(());
         }
 
         let pdb_object = PdbObject::parse(&self.pdb_data).map_err(|e| e.to_string())?;
         let symbol_map = pdb_object.symbol_map();
-        
+                
         let functions: Vec<Function> = symbol_map.iter().filter_map(|sym| {
             sym.name().map(|name| Function {
                 name: self.demangle_name(name),
@@ -29,7 +30,9 @@ impl PDBContext {
                 size: sym.size as u32,
             })
         }).collect();
-        
+
+        info!("Found {} functions in PDB", functions.len());
+
         *self.functions.borrow_mut() = Some(functions);
         Ok(())
     }
@@ -42,16 +45,19 @@ impl PDBContext {
 
     pub fn get_functions(&self) -> Result<Vec<Function>, String> {
         self.load()?;
-        Ok(self.functions.borrow().as_ref().unwrap().clone())
+        match self.functions.borrow().as_ref() {
+            Some(functions) => Ok(functions.clone()),
+            None => Err("No functions found".to_string()),
+        }
     }
 
     #[allow(dead_code)]
     pub fn get_function_by_rva(&self, rva: u32) -> Result<Option<Function>, String> {
         self.load()?;
-        let functions = self.functions.borrow();
-        let functions = functions.as_ref().unwrap();
-        
-        Ok(functions.iter().find(|f| f.rva == rva).cloned())
+        match self.functions.borrow().as_ref() {
+            Some(functions) => Ok(functions.iter().find(|f| f.rva == rva).cloned()),
+            None => Err("No functions found".to_string()),
+        }
     }
 
 }
