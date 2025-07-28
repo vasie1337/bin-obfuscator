@@ -1,6 +1,4 @@
-use crate::pdb::PDBContext;
-use crate::types::Function;
-use common::{info};
+use crate::pdb::{PDBContext, PDBFunction};
 use symbolic::common::Name;
 use symbolic::demangle::{Demangle, DemangleOptions};
 use symbolic::debuginfo::pdb::PdbObject;
@@ -22,15 +20,13 @@ impl PDBContext {
         let pdb_object = PdbObject::parse(&self.pdb_data).map_err(|e| e.to_string())?;
         let symbol_map = pdb_object.symbol_map();
                 
-        let functions: Vec<Function> = symbol_map.iter().filter_map(|sym| {
-            sym.name().map(|name| Function {
+        let functions: Vec<PDBFunction> = symbol_map.iter().filter_map(|sym| {
+            sym.name().map(|name| PDBFunction {
                 name: self.demangle_name(name),
                 rva: sym.address as u32,
                 size: sym.size as u32,
             })
         }).collect();
-
-        info!("Found {} functions in PDB", functions.len());
 
         *self.functions.borrow_mut() = Some(functions);
         Ok(())
@@ -42,7 +38,7 @@ impl PDBContext {
         demangled.to_string()
     }
 
-    pub fn get_functions(&self) -> Result<Vec<Function>, String> {
+    pub fn get_functions(&self) -> Result<Vec<PDBFunction>, String> {
         self.parse()?;
         match self.functions.borrow().as_ref() {
             Some(functions) => Ok(functions.clone()),
@@ -51,7 +47,7 @@ impl PDBContext {
     }
 
     #[allow(dead_code)]
-    pub fn get_function_by_rva(&self, rva: u32) -> Result<Option<Function>, String> {
+    pub fn get_function_by_rva(&self, rva: u32) -> Result<Option<PDBFunction>, String> {
         self.parse()?;
         match self.functions.borrow().as_ref() {
             Some(functions) => Ok(functions.iter().find(|f| f.rva == rva).cloned()),

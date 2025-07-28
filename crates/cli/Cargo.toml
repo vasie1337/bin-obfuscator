@@ -1,10 +1,10 @@
 [package]
-name = "bin-obfuscator"
+name = "cli"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-common = { path = "../common", package = "bin-obfuscator-common" }
-core = { path = "../core", package = "bin-obfuscator-core" }
+common = { path = "../common", package = "common" }
+core = { path = "../core", package = "core" }
 clap = { version = "4.5", features = ["derive"] }
 log = "0.4"

@@ -1,5 +1,4 @@
 use crate::pe::{PEContext, PEType};
-use common::info;
 use goblin::pe::PE;
 use std::cell::RefCell;
 
@@ -24,8 +23,6 @@ impl PEContext {
         if !self.is_supported() {
             return Err("PE is not supported".to_string());
         }
-
-        info!("Successfully parsed PE with type: {:?}", self.get_pe_type());
 
         Ok(())
     }

@@ -1,10 +1,6 @@
-mod pe;
-mod pdb;
-mod types;
-
 use common::{debug, error, Logger};
-use crate::pe::PEContext;
-use crate::pdb::PDBContext;
+use parsers::pe::PEContext;
+use parsers::pdb::PDBContext;
 
 pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     Logger::ensure_init();

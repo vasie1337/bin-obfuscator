@@ -1,10 +1,8 @@
 [package]
-name = "bin-obfuscator-core"
+name = "core"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-common = { path = "../common", package = "bin-obfuscator-common" }
-goblin = "0.10.0"
-symbolic = { version = "12.16.0", features = ["demangle", "debuginfo"] }
-
+common = { path = "../common", package = "common" }
+parsers = { path = "../parsers", package = "parsers" }
