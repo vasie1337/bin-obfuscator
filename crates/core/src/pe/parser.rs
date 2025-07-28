@@ -11,7 +11,7 @@ impl PEContext {
         }
     }
 
-    pub fn load(&self) -> Result<(), String> {
+    pub fn parse(&self) -> Result<(), String> {
         if self.pe.borrow().is_some() {
             return Ok(());
         }

@@ -1,4 +1,4 @@
-pub mod loader;
+pub mod parser;
 pub mod patcher;
 pub mod sections;
 pub mod finalizer;

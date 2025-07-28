@@ -10,19 +10,19 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
     Logger::ensure_init();
 
     let pe_context = PEContext::new(binary_data.to_vec());
-    match pe_context.load() {
+    match pe_context.parse() {
         Ok(_) => {},
         Err(e) => {
-            error!("Failed to load PE: {}", e);
+            error!("Failed to parse PE: {}", e);
             return Err(e);
         }
     }
 
     let pdb_context = PDBContext::new(pdb_data.to_vec());
-    match pdb_context.load() {
+    match pdb_context.parse() {
         Ok(_) => {},
         Err(e) => {
-            error!("Failed to load PDB: {}", e);
+            error!("Failed to parse PDB: {}", e);
             return Err(e);
         }
     }

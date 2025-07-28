@@ -1,6 +1,6 @@
 use crate::pdb::PDBContext;
 use crate::types::Function;
-use common::{debug, info};
+use common::{info};
 use symbolic::common::Name;
 use symbolic::demangle::{Demangle, DemangleOptions};
 use symbolic::debuginfo::pdb::PdbObject;
@@ -14,9 +14,8 @@ impl PDBContext {
         }
     }
 
-    pub fn load(&self) -> Result<(), String> {
+    pub fn parse(&self) -> Result<(), String> {
         if self.functions.borrow().is_some() {
-            debug!("PDB already loaded");
             return Ok(());
         }
 
@@ -44,7 +43,7 @@ impl PDBContext {
     }
 
     pub fn get_functions(&self) -> Result<Vec<Function>, String> {
-        self.load()?;
+        self.parse()?;
         match self.functions.borrow().as_ref() {
             Some(functions) => Ok(functions.clone()),
             None => Err("No functions found".to_string()),
@@ -53,7 +52,7 @@ impl PDBContext {
 
     #[allow(dead_code)]
     pub fn get_function_by_rva(&self, rva: u32) -> Result<Option<Function>, String> {
-        self.load()?;
+        self.parse()?;
         match self.functions.borrow().as_ref() {
             Some(functions) => Ok(functions.iter().find(|f| f.rva == rva).cloned()),
             None => Err("No functions found".to_string()),
