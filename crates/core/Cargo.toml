@@ -6,4 +6,5 @@ edition = "2024"
 [dependencies]
 common = { path = "../common", package = "bin-obfuscator-common" }
 goblin = "0.10.0"
+symbolic = { version = "12.16.0", features = ["demangle", "debuginfo"] }
 
