@@ -28,8 +28,7 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
         return Err("PDB data is empty".to_string());
     }
 
-    let size_mb = binary_data.len() as f64 / 1024.0 / 1024.0;
-    info!("Obfuscating {} mb binary", size_mb);
+    info!("Obfuscating binary...");
     
     let binary_data = binary_data.to_vec();
     let _pdb_data = pdb_data.to_vec();
