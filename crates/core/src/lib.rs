@@ -14,6 +14,8 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
         }
     }
 
+    info!("PE parsed successfully");
+
     let pdb_context = PDBContext::new(pdb_data.to_vec());
     match pdb_context.parse() {
         Ok(_) => {},
@@ -23,12 +25,8 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
         }
     }
 
-    let functions = pdb_context.get_functions().unwrap();
-    for function in functions {
-        info!("Function: {} - RVA: {} - Size: {}", function.name, function.rva, function.size);
-    }
+    info!("PDB parsed successfully");
 
-    // TODO: Implement obfuscation
 
     pe_context.finalize();
 

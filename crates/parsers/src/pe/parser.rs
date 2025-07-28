@@ -27,26 +27,35 @@ impl PEContext {
         Ok(())
     }
 
-    fn get_pe_type(&self) -> PEType {
+    pub fn with_pe<T, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(&PE) -> T,
+    {
         let pe_borrow = self.pe.borrow();
-        let pe = pe_borrow.as_ref().unwrap();
-        let characteristics = pe.header.coff_header.characteristics;
+        pe_borrow.as_ref().map(f)
+    }
 
-        if characteristics & goblin::pe::characteristic::IMAGE_FILE_EXECUTABLE_IMAGE == goblin::pe::characteristic::IMAGE_FILE_EXECUTABLE_IMAGE {
-            return PEType::EXE;
-        } else if characteristics & goblin::pe::characteristic::IMAGE_FILE_DLL == goblin::pe::characteristic::IMAGE_FILE_DLL {
-            return PEType::DLL;
-        } else if characteristics & goblin::pe::characteristic::IMAGE_FILE_SYSTEM == goblin::pe::characteristic::IMAGE_FILE_SYSTEM {
-            return PEType::SYS;
-        } else {
-            return PEType::UNKNOWN;
+    fn get_pe_type(&self) -> PEType {
+        let characteristics = self.with_pe(|pe| pe.header.coff_header.characteristics);
+        if let Some(characteristics) = characteristics {
+            if characteristics & goblin::pe::characteristic::IMAGE_FILE_EXECUTABLE_IMAGE == goblin::pe::characteristic::IMAGE_FILE_EXECUTABLE_IMAGE {
+                return PEType::EXE;
+            } else if characteristics & goblin::pe::characteristic::IMAGE_FILE_DLL == goblin::pe::characteristic::IMAGE_FILE_DLL {
+                return PEType::DLL;
+            } else if characteristics & goblin::pe::characteristic::IMAGE_FILE_SYSTEM == goblin::pe::characteristic::IMAGE_FILE_SYSTEM {
+                return PEType::SYS;
+            }
         }
+        PEType::UNKNOWN
     }
 
     fn get_pe_machine(&self) -> u16 {
-        let pe_borrow = self.pe.borrow();
-        let pe = pe_borrow.as_ref().unwrap();
-        pe.header.coff_header.machine
+        let machine = self.with_pe(|pe| pe.header.coff_header.machine);
+        if let Some(machine) = machine {
+            machine
+        } else {
+            goblin::pe::header::COFF_MACHINE_UNKNOWN
+        }
     }
 
     fn is_supported(&self) -> bool {
