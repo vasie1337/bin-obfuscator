@@ -1,4 +1,4 @@
-pub mod parser;
+pub mod loader;
 
 use crate::types::Function;
 use std::cell::RefCell;

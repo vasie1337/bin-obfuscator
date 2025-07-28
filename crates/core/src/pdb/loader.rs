@@ -14,7 +14,11 @@ impl PDBContext {
         }
     }
 
-    pub fn parse(&self) -> Result<(), String> {
+    pub fn load(&self) -> Result<(), String> {
+        if self.functions.borrow().is_some() {
+            return Ok(());
+        }
+
         let pdb_object = PdbObject::parse(&self.pdb_data).map_err(|e| e.to_string())?;
         let symbol_map = pdb_object.symbol_map();
         
@@ -37,13 +41,13 @@ impl PDBContext {
     }
 
     pub fn get_functions(&self) -> Result<Vec<Function>, String> {
-        self.parse()?;
+        self.load()?;
         Ok(self.functions.borrow().as_ref().unwrap().clone())
     }
 
     #[allow(dead_code)]
     pub fn get_function_by_rva(&self, rva: u32) -> Result<Option<Function>, String> {
-        self.parse()?;
+        self.load()?;
         let functions = self.functions.borrow();
         let functions = functions.as_ref().unwrap();
         
