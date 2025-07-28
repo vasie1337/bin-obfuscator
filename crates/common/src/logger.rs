@@ -30,24 +30,21 @@ impl Logger {
         builder
             .target(Target::Stdout)
             .filter_level(level)
-            .format(|buf, record| {
-                let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
-                
+            .format(|buf, record| {                
                 let file_path = record.file().unwrap_or("unknown");
                 let crate_name = Self::extract_crate_name(file_path);
                 
                 let (level_color, reset) = match record.level() {
-                    log::Level::Error => ("\x1b[31m", "\x1b[0m"),
-                    log::Level::Warn => ("\x1b[33m", "\x1b[0m"),
-                    log::Level::Info => ("\x1b[32m", "\x1b[0m"),
-                    log::Level::Debug => ("\x1b[36m", "\x1b[0m"),
-                    log::Level::Trace => ("\x1b[35m", "\x1b[0m"),
+                    log::Level::Error => ("\x1b[31m", "\x1b[0m"), // Red
+                    log::Level::Warn => ("\x1b[33m", "\x1b[0m"), // Yellow
+                    log::Level::Info => ("\x1b[32m", "\x1b[0m"), // Green
+                    log::Level::Debug => ("\x1b[36m", "\x1b[0m"), // Cyan
+                    log::Level::Trace => ("\x1b[35m", "\x1b[0m"), // Magenta
                 };
                 
                 writeln!(
                     buf,
-                    "\x1b[90m[{}]\x1b[0m {}{:>5}{} \x1b[94m[{}]\x1b[0m \x1b[90m{}:{}\x1b[0m {}",
-                    timestamp,
+                    "\x1b[0m {}{:>5}{} \x1b[94m[{}]\x1b[0m \x1b[90m{}:{}\x1b[0m {}",
                     level_color,
                     record.level(),
                     reset,
