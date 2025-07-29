@@ -1,4 +1,4 @@
-use common::info;
+use common::debug;
 use iced_x86::Instruction;
 
 pub mod nop_pass;
@@ -30,7 +30,7 @@ impl PassManager {
     
     pub fn run_passes(&self, mut instructions: Vec<Instruction>) -> Vec<Instruction> {
         for pass in &self.passes {
-            info!("Running pass: {}", pass.name());
+            debug!("Running pass: {}", pass.name());
             instructions = pass.apply(&instructions);
         }
         instructions

@@ -1,4 +1,4 @@
-use common::info;
+use common::debug;
 use iced_x86::{Instruction, Code};
 use super::Pass;
 
@@ -42,7 +42,7 @@ impl Pass for NopPass {
             }
         }
 
-        info!("NOP pass: Inserted {} NOP instructions", 
+        debug!("NOP pass: Inserted {} NOP instructions", 
                      result.len() - instructions.len());
 
         result
