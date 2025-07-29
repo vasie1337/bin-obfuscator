@@ -1,0 +1,8 @@
+[package]
+name = "parsers"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+goblin = "0.10.0"
+symbolic = { version = "12.16.0", features = ["demangle", "debuginfo"] }
