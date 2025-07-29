@@ -77,10 +77,9 @@ impl CompilerContext {
             let rel32 = relative_offset as i32;
 
             let mut jmp_bytes = [0u8; 5];
-            jmp_bytes[0] = 0xE9; // JMP rel32 opcode
+            jmp_bytes[0] = 0xE9;
             jmp_bytes[1..].copy_from_slice(&rel32.to_le_bytes());
 
-            // Write the JMP instruction at the original function location
             self.pe_context.write_data_at_rva(src_rva, &jmp_bytes)
                 .map_err(|e| format!("Failed to patch JMP at {:#x}: {}", src_rva, e))?;
 

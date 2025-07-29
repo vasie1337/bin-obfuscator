@@ -12,7 +12,6 @@ pub mod passes;
 pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     Logger::ensure_init();
 
-    // Parse and  PE binary
     let pe_context = parse_and_validate_pe(binary_data)?;
     info!("PE parsed successfully");
 

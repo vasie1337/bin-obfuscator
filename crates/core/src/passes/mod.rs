@@ -5,9 +5,7 @@ pub mod nop_pass;
 
 pub trait Pass {
     fn name(&self) -> &'static str;
-
     fn apply(&self, instructions: &[Instruction]) -> Vec<Instruction>;
-
     fn enabled_by_default(&self) -> bool {
         true
     }
