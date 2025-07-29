@@ -1,12 +1,13 @@
 use crate::pe::{PEContext, PEType};
 use goblin::pe::PE;
 
+// TODO: Add error handling
 impl PEContext {
     pub fn new(pe_data: Vec<u8>) -> Self {
         Self { pe_data }
     }
 
-    fn parse(&self) -> Result<PE, String> {
+    pub fn parse(&self) -> Result<PE, String> {
         PE::parse(&self.pe_data).map_err(|e| e.to_string())
     }
 
