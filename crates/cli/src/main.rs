@@ -1,5 +1,5 @@
 use clap::{Arg, ArgAction, Command};
-use common::{error, info, Logger};
+use common::{Logger, error, info};
 use log::LevelFilter;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -7,55 +7,74 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 fn load_file(path: &Path) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let mut file = File::open(path)
-        .map_err(|e| format!("Failed to open file '{}': {}", path.display(), e))?;
-    
+    let mut file =
+        File::open(path).map_err(|e| format!("Failed to open file '{}': {}", path.display(), e))?;
+
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)
         .map_err(|e| format!("Failed to read file '{}': {}", path.display(), e))?;
-    
+
     if buffer.is_empty() {
         return Err(format!("File '{}' is empty", path.display()).into());
     }
-    
+
     Ok(buffer)
 }
 
 fn save_file(path: &Path, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create output directory '{}': {}", parent.display(), e))?;
+        std::fs::create_dir_all(parent).map_err(|e| {
+            format!(
+                "Failed to create output directory '{}': {}",
+                parent.display(),
+                e
+            )
+        })?;
     }
-    
+
     let mut file = File::create(path)
         .map_err(|e| format!("Failed to create output file '{}': {}", path.display(), e))?;
-    
+
     file.write_all(data)
         .map_err(|e| format!("Failed to write to output file '{}': {}", path.display(), e))?;
-    
+
     Ok(())
 }
 
 fn validate_file_exists(path: &Path, file_type: &str) -> Result<(), String> {
     if !path.exists() {
-        return Err(format!("{} file '{}' does not exist", file_type, path.display()));
+        return Err(format!(
+            "{} file '{}' does not exist",
+            file_type,
+            path.display()
+        ));
     }
-    
+
     if !path.is_file() {
-        return Err(format!("{} path '{}' is not a file", file_type, path.display()));
+        return Err(format!(
+            "{} path '{}' is not a file",
+            file_type,
+            path.display()
+        ));
     }
-    
+
     Ok(())
 }
 
 fn generate_output_path(input_path: &Path) -> PathBuf {
     let parent = input_path.parent().unwrap_or(Path::new("."));
-    let stem = input_path.file_stem().unwrap_or(std::ffi::OsStr::new("output"));
-    let extension = input_path.extension().unwrap_or(std::ffi::OsStr::new("exe"));
-    
-    parent.join(format!("{}_obfuscated.{}", 
-        stem.to_string_lossy(), 
-        extension.to_string_lossy()))
+    let stem = input_path
+        .file_stem()
+        .unwrap_or(std::ffi::OsStr::new("output"));
+    let extension = input_path
+        .extension()
+        .unwrap_or(std::ffi::OsStr::new("exe"));
+
+    parent.join(format!(
+        "{}_obfuscated.{}",
+        stem.to_string_lossy(),
+        extension.to_string_lossy()
+    ))
 }
 
 fn main() {
@@ -112,12 +131,12 @@ fn main() {
             _ => LevelFilter::Trace,
         }
     };
-    
+
     Logger::ensure_init_with_level(log_level);
 
     let binary_path = Path::new(matches.get_one::<String>("binary").unwrap());
     let pdb_path = Path::new(matches.get_one::<String>("pdb").unwrap());
-    
+
     let output_path = if let Some(output) = matches.get_one::<String>("output") {
         PathBuf::from(output)
     } else {
@@ -125,12 +144,12 @@ fn main() {
     };
 
     info!("x86-64 PE Binary Obfuscator v0.1.0");
-    
+
     if let Err(e) = validate_file_exists(binary_path, "Binary") {
         error!("{}", e);
         process::exit(1);
     }
-    
+
     if let Err(e) = validate_file_exists(pdb_path, "PDB") {
         error!("{}", e);
         process::exit(1);
@@ -138,12 +157,15 @@ fn main() {
 
     info!("Input binary: {}", binary_path.display());
     info!("PDB file: {}", pdb_path.display());
-    
+
     info!("Loading input files...");
-    
+
     let pe_data = match load_file(binary_path) {
         Ok(data) => {
-            info!("Loaded binary: {:.2} MB", data.len() as f64 / 1024.0 / 1024.0);
+            info!(
+                "Loaded binary: {:.2} MB",
+                data.len() as f64 / 1024.0 / 1024.0
+            );
             data
         }
         Err(e) => {
@@ -164,7 +186,7 @@ fn main() {
     };
 
     info!("Starting obfuscation process...");
-    
+
     let obfuscated_data = match core::obfuscate_binary(&pe_data, &pdb_data) {
         Ok(data) => {
             info!("Obfuscation completed successfully");
@@ -177,14 +199,19 @@ fn main() {
     };
 
     info!("Saving obfuscated binary...");
-    
+
     if let Err(e) = save_file(&output_path, &obfuscated_data) {
         error!("Failed to save output: {}", e);
         process::exit(1);
     }
 
-    info!("Successfully created obfuscated binary: {}", output_path.display());
-    info!("Original size: {:.2} MB, Obfuscated size: {:.2} MB", 
-          pe_data.len() as f64 / 1024.0 / 1024.0,
-          obfuscated_data.len() as f64 / 1024.0 / 1024.0);
+    info!(
+        "Successfully created obfuscated binary: {}",
+        output_path.display()
+    );
+    info!(
+        "Original size: {:.2} MB, Obfuscated size: {:.2} MB",
+        pe_data.len() as f64 / 1024.0 / 1024.0,
+        obfuscated_data.len() as f64 / 1024.0 / 1024.0
+    );
 }

@@ -1,2 +1,2 @@
-pub mod pe;
 pub mod pdb;
+pub mod pe;

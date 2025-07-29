@@ -1,7 +1,7 @@
+pub mod finalizer;
 pub mod parser;
 pub mod patcher;
 pub mod sections;
-pub mod finalizer;
 
 use goblin::pe::PE;
 use std::cell::RefCell;

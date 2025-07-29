@@ -1,12 +1,12 @@
 use crate::pdb::{PDBContext, PDBFunction};
-use symbolic::common::Name;
-use symbolic::demangle::{Demangle, DemangleOptions};
-use symbolic::debuginfo::pdb::PdbObject;
 use std::cell::RefCell;
+use symbolic::common::Name;
+use symbolic::debuginfo::pdb::PdbObject;
+use symbolic::demangle::{Demangle, DemangleOptions};
 
 impl PDBContext {
     pub fn new(pdb_data: Vec<u8>) -> Self {
-        Self { 
+        Self {
             pdb_data,
             functions: RefCell::new(None),
         }
@@ -19,14 +19,17 @@ impl PDBContext {
 
         let pdb_object = PdbObject::parse(&self.pdb_data).map_err(|e| e.to_string())?;
         let symbol_map = pdb_object.symbol_map();
-                
-        let functions: Vec<PDBFunction> = symbol_map.iter().filter_map(|sym| {
-            sym.name().map(|name| PDBFunction {
-                name: self.demangle_name(name),
-                rva: sym.address as u32,
-                size: sym.size as u32,
+
+        let functions: Vec<PDBFunction> = symbol_map
+            .iter()
+            .filter_map(|sym| {
+                sym.name().map(|name| PDBFunction {
+                    name: self.demangle_name(name),
+                    rva: sym.address as u32,
+                    size: sym.size as u32,
+                })
             })
-        }).collect();
+            .collect();
 
         *self.functions.borrow_mut() = Some(functions);
         Ok(())
@@ -54,5 +57,4 @@ impl PDBContext {
             None => Err("No functions found".to_string()),
         }
     }
-
 }
