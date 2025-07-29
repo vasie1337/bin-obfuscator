@@ -1,13 +1,15 @@
 pub mod functions;
 
-use parsers::pdb::PDBFunction;
 use iced_x86::Instruction;
+use parsers::pdb::{PDBContext, PDBFunction};
+use parsers::pe::PEContext;
 
-pub struct Function {
+pub struct RuntimeFunction {
     pub pdb_function: PDBFunction,
     pub instructions: Vec<Instruction>,
 }
 
 pub struct AnalyzerContext {
-    pub functions: Vec<Function>,
+    pub pe_context: PEContext,
+    pub pdb_context: PDBContext,
 }
