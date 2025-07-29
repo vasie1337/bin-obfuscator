@@ -1,5 +1,6 @@
 use crate::analyzer::{AnalyzerContext, RuntimeFunction};
-use iced_x86::Decoder;
+use common::info;
+use iced_x86::{Decoder, FlowControl};
 use parsers::pdb::{PDBContext, PDBFunction};
 use parsers::pe::PEContext;
 
@@ -59,14 +60,12 @@ impl AnalyzerContext {
 
         for pdb_function in pdb_functions {
             let function_name = pdb_function.name.clone();
+            let function_rva = pdb_function.rva;
             let mut runtime_function = RuntimeFunction::new(pdb_function);
             match runtime_function.decode(&self.pe_context) {
                 Ok(_) => runtime_functions.push(runtime_function),
                 Err(e) => {
-                    return Err(format!(
-                        "Failed to analyze function '{}': {}",
-                        function_name, e
-                    ));
+                    info!("Failed to analyze function {:#x} {}: {}", function_rva, function_name, e);
                 }
             }
         }
