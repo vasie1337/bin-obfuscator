@@ -6,10 +6,12 @@ use iced_x86::{BlockEncoder, BlockEncoderOptions, InstructionBlock};
 
 pub mod analyzer;
 pub mod function;
+pub mod compiler;
 
 pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     Logger::ensure_init();
 
+    // TODO: Add error handling
     let mut pe_context = PEContext::new(binary_data.to_vec());
     if !pe_context.is_supported() {
         error!("PE is not supported");
@@ -18,6 +20,7 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
 
     info!("PE parsed successfully");
 
+    // TODO: Add error handling
     let pdb_context = PDBContext::new(pdb_data.to_vec());
     if !pdb_context.is_supported() {
         error!("PDB is not supported");
@@ -30,7 +33,11 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
     let runtime_functions = analyzer_context.analyze().unwrap();
 
     let all_instructions = runtime_functions.iter().flat_map(|f| f.instructions.iter()).copied().collect::<Vec<_>>();
-    
+
+    for instruction in &all_instructions {
+        info!("Instruction: {}", instruction.to_string());
+    }
+
     let rva = pe_context.get_next_section_rva().unwrap();
 
     let block = InstructionBlock::new(&all_instructions, rva);

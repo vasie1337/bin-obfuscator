@@ -1,4 +1,4 @@
-use iced_x86::{BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock};
+use iced_x86::{Decoder, Instruction};
 use parsers::pdb::PDBFunction;
 use parsers::pe::PEContext;
 

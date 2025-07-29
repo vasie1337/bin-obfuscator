@@ -3,6 +3,7 @@ use symbolic::common::Name;
 use symbolic::debuginfo::pdb::PdbObject;
 use symbolic::demangle::{Demangle, DemangleOptions};
 
+// TODO: Add error handling
 impl PDBContext {
     pub fn new(pdb_data: Vec<u8>) -> Self {
         Self { pdb_data }

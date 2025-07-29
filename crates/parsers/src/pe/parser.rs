@@ -1,6 +1,7 @@
 use crate::pe::{PEContext, PEType};
 use goblin::pe::PE;
 
+// TODO: Add error handling
 impl PEContext {
     pub fn new(pe_data: Vec<u8>) -> Self {
         Self { pe_data }
