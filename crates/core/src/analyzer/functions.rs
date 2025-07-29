@@ -1,6 +1,6 @@
 use crate::analyzer::{AnalyzerContext, RuntimeFunction};
 use common::info;
-use iced_x86::{Decoder, FlowControl};
+use iced_x86::Decoder;
 use parsers::pdb::{PDBContext, PDBFunction};
 use parsers::pe::PEContext;
 
