@@ -24,9 +24,7 @@ impl AnalyzerContext {
 
         for pdb_function in pdb_functions {
             let function_name = pdb_function.name.clone();
-            //if function_name != "main" && function_name != "__security_init_cookie" && function_name != "__security_check_cookie" {
-            //    continue; // TODO: remove this - only for testing
-            //}
+            
             let function_rva = pdb_function.rva;
             let mut runtime_function = RuntimeFunction::new(function_name, function_rva, pdb_function.size);
             match runtime_function.decode(&self.pe_context) {

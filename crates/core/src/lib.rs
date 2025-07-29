@@ -1,8 +1,7 @@
 use analyzer::AnalyzerContext;
-use common::{Logger, debug, error, info};
+use common::{Logger, error, info};
 use parsers::pdb::PDBContext;
 use parsers::pe::PEContext;
-use iced_x86::{BlockEncoder, BlockEncoderOptions, InstructionBlock};
 
 pub mod analyzer;
 pub mod function;

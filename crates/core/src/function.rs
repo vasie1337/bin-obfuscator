@@ -1,4 +1,4 @@
-use iced_x86::{BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock};
+use iced_x86::{BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock, Mnemonic};
 use parsers::pe::PEContext;
 
 #[derive(Clone)]
@@ -81,7 +81,16 @@ impl RuntimeFunction {
 
         while decoder.can_decode() {
             let instruction = decoder.decode();
-            instructions.push(instruction);
+
+            match instruction.mnemonic() {
+                Mnemonic::Ret => {
+                    instructions.push(instruction);
+                    break;
+                }
+                _ => {
+                    instructions.push(instruction);
+                }
+            }
         }
 
         instructions.shrink_to_fit();
