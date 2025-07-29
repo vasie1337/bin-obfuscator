@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 common = { path = "../common", package = "common" }
+iced-x86 = "1.21.0"
 parsers = { path = "../parsers", package = "parsers" }

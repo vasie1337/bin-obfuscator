@@ -1,6 +1,9 @@
 use common::{Logger, error, info};
 use parsers::pdb::PDBContext;
 use parsers::pe::PEContext;
+use analyzer::AnalyzerContext;
+
+pub mod analyzer;
 
 pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     Logger::ensure_init();
