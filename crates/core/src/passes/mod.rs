@@ -1,7 +1,7 @@
 use common::debug;
 use iced_x86::Instruction;
 
-pub mod nop_pass;
+pub mod opaque_branches_pass;
 
 pub trait Pass {
     fn name(&self) -> &'static str;
@@ -36,7 +36,7 @@ impl PassManager {
     
     pub fn default() -> Self {
         let mut manager = Self::new();
-        manager.add_pass(Box::new(nop_pass::NopPass::new()));
+        manager.add_pass(Box::new(opaque_branches_pass::OpaqueBranchesPass::new()));
         manager
     }
 }
