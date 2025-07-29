@@ -7,6 +7,7 @@ use iced_x86::{BlockEncoder, BlockEncoderOptions, InstructionBlock};
 pub mod analyzer;
 pub mod function;
 pub mod compiler;
+pub mod passes;
 
 pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     Logger::ensure_init();
@@ -34,13 +35,20 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
 
     let all_instructions = runtime_functions.iter().flat_map(|f| f.instructions.iter()).copied().collect::<Vec<_>>();
 
-    for instruction in &all_instructions {
+    // Apply obfuscation passes
+    info!("Applying obfuscation passes...");
+    let pass_manager = passes::PassManager::default();
+    let transformed_instructions = pass_manager.run_passes(all_instructions);
+
+    for instruction in &transformed_instructions {
         info!("Instruction: {}", instruction.to_string());
     }
 
     let rva = pe_context.get_next_section_rva().unwrap();
 
-    let block = InstructionBlock::new(&all_instructions, rva);
+    // Instead of merging all function bytes, create a new block for each function
+    // and encode each function separately
+    let block = InstructionBlock::new(&transformed_instructions, rva);
     let bytes = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
         Ok(bytes) => bytes.code_buffer,
         Err(e) => return Err(e.to_string()),
