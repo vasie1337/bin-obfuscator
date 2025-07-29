@@ -6,7 +6,7 @@ impl PEContext {
         Self { pe_data }
     }
 
-    fn parse(&self) -> Result<PE, String> {
+    pub fn parse(&self) -> Result<PE, String> {
         PE::parse(&self.pe_data).map_err(|e| e.to_string())
     }
 

@@ -46,4 +46,8 @@ impl RuntimeFunction {
 
         Ok(())
     }
+
+    pub fn encode(&self, _pe_context: &PEContext) -> Result<Vec<u8>, String> {
+        Ok(vec![])
+    }
 }
