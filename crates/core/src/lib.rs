@@ -9,7 +9,7 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
     match pe_context.parse() {
         Ok(_) => {}
         Err(e) => {
-            error!("Failed to parse PE: {}", e);
+            error!("Failed to parse PE: {e}");
             return Err(e);
         }
     }
@@ -20,7 +20,7 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
     match pdb_context.parse() {
         Ok(_) => {}
         Err(e) => {
-            error!("Failed to parse PDB: {}", e);
+            error!("Failed to parse PDB: {e}");
             return Err(e);
         }
     }
