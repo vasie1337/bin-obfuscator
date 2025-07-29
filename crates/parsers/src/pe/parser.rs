@@ -83,7 +83,7 @@ impl PEContext {
             }
         }
 
-        Err(format!("RVA {:#x} not found in any section", rva))
+        Err(format!("RVA {rva:#x} not found in any section"))
     }
 
     pub fn file_offset_to_rva(&self, file_offset: usize) -> Result<u32, String> {
@@ -111,8 +111,7 @@ impl PEContext {
         }
 
         Err(format!(
-            "File offset {:#x} not found in any section",
-            file_offset
+            "File offset {file_offset:#x} not found in any section"
         ))
     }
 
