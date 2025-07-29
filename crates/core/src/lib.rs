@@ -36,11 +36,29 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
 
     // Print some stats
     info!("Runtime functions: {}", runtime_functions.len());
-    info!("Total instructions: {}", runtime_functions.iter().map(|f| f.instructions.len()).sum::<usize>());
-    info!("Total bytes: {}", runtime_functions.iter().map(|f| f.instructions.iter().map(|i| i.len()).sum::<usize>()).sum::<usize>());
+    info!(
+        "Total instructions: {}",
+        runtime_functions
+            .iter()
+            .map(|f| f.instructions.len())
+            .sum::<usize>()
+    );
+    info!(
+        "Total bytes: {}",
+        runtime_functions
+            .iter()
+            .map(|f| f.instructions.iter().map(|i| i.len()).sum::<usize>())
+            .sum::<usize>()
+    );
 
     // Print the first 10 instructions of the first function
-    info!("First 10 instructions of the first function: {:?}", runtime_functions[0].instructions[0..10].iter().map(|i| i.to_string()).collect::<Vec<String>>());
+    info!(
+        "First 10 instructions of the first function: {:?}",
+        runtime_functions[0].instructions[0..10]
+            .iter()
+            .map(|i| i.to_string())
+            .collect::<Vec<String>>()
+    );
 
     Ok(binary_data.to_vec())
 }
