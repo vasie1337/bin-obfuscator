@@ -1,10 +1,5 @@
-pub mod finalizer;
 pub mod parser;
-pub mod patcher;
-pub mod sections;
 
-use goblin::pe::PE;
-use std::cell::RefCell;
 use std::fmt::{Debug, Formatter};
 
 pub enum PEType {
@@ -25,7 +20,7 @@ impl Debug for PEType {
     }
 }
 
+#[derive(Clone)]
 pub struct PEContext {
     pub pe_data: Vec<u8>,
-    pub pe: RefCell<Option<PE<'static>>>,
 }

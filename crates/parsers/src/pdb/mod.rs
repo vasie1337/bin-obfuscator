@@ -1,7 +1,5 @@
 pub mod parser;
 
-use std::cell::RefCell;
-
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct PDBFunction {
@@ -10,7 +8,7 @@ pub struct PDBFunction {
     pub size: u32,
 }
 
+#[derive(Clone)]
 pub struct PDBContext {
     pdb_data: Vec<u8>,
-    functions: RefCell<Option<Vec<PDBFunction>>>,
 }
