@@ -23,7 +23,11 @@ impl PEContext {
             .windows_fields
             .section_alignment;
         
-        let last_section = pe.sections.last().unwrap();
+        let last_section = match pe.sections.last() {
+            Some(section) => section,
+            None => return Err("PE file has no sections".to_string()),
+        };
+
         let last_section_end = last_section.virtual_address + last_section.virtual_size;
         
         let next_rva = align_up(last_section_end as u64, section_alignment as u64);
@@ -50,7 +54,11 @@ impl PEContext {
             let section_alignment = optional_header.windows_fields.section_alignment;
             let file_alignment = optional_header.windows_fields.file_alignment;
             
-            let last_section = pe.sections.last().unwrap();
+            let last_section = match pe.sections.last() {
+                Some(section) => section,
+                None => return Err("PE file has no sections".to_string()),
+            };
+
             let last_section_info = (
                 last_section.virtual_address,
                 last_section.virtual_size,

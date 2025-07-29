@@ -5,7 +5,6 @@ pub enum PEType {
     DLL,
     EXE,
     SYS,
-    UNKNOWN,
 }
 
 #[derive(Clone)]

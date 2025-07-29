@@ -1,7 +1,6 @@
 use crate::pe::{PEContext, PEType};
 use goblin::pe::PE;
 
-// TODO: Add error handling
 impl PEContext {
     pub fn new(pe_data: Vec<u8>) -> Self {
         Self { pe_data }
@@ -11,39 +10,52 @@ impl PEContext {
         PE::parse(&self.pe_data).map_err(|e| e.to_string())
     }
 
-    fn get_pe_type(&self) -> PEType {
-        let pe = self.parse().unwrap();
+    fn get_pe_type(&self) -> Result<PEType, String> {
+        let pe = match self.parse() {
+            Ok(pe) => pe,
+            Err(e) => {
+                return Err(e.to_string());
+            }
+        };
         let characteristics = pe.header.coff_header.characteristics;
         if characteristics & goblin::pe::characteristic::IMAGE_FILE_EXECUTABLE_IMAGE
             == goblin::pe::characteristic::IMAGE_FILE_EXECUTABLE_IMAGE
         {
-            return PEType::EXE;
+            return Ok(PEType::EXE);
         } else if characteristics & goblin::pe::characteristic::IMAGE_FILE_DLL
             == goblin::pe::characteristic::IMAGE_FILE_DLL
         {
-            return PEType::DLL;
+            return Ok(PEType::DLL);
         } else if characteristics & goblin::pe::characteristic::IMAGE_FILE_SYSTEM
             == goblin::pe::characteristic::IMAGE_FILE_SYSTEM
         {
-            return PEType::SYS;
+            return Ok(PEType::SYS);
         }
-        PEType::UNKNOWN
+
+        Err("Unsupported PE type".to_string())
     }
 
     fn get_pe_machine(&self) -> u16 {
-        let pe = self.parse().unwrap();
+        let pe = match self.parse() {
+            Ok(pe) => pe,
+            Err(_) => return 0,
+        };
         pe.header.coff_header.machine
     }
 
     pub fn is_supported(&self) -> bool {
-        let pe_type = self.get_pe_type();
+        let pe_type = match self.get_pe_type() {
+            Ok(pe_type) => pe_type,
+            Err(_) => return false,
+        };
+
         let pe_machine = self.get_pe_machine();
 
         if pe_machine != goblin::pe::header::COFF_MACHINE_X86_64 {
             return false;
         }
 
-        matches!(pe_type, PEType::EXE)
+        matches!(pe_type, PEType::EXE | PEType::DLL)
     }
 
     pub fn read_data(&self, offset: usize, size: usize) -> Result<Vec<u8>, String> {
@@ -67,7 +79,7 @@ impl PEContext {
         if rva
             < pe.header
                 .optional_header
-                .unwrap()
+                .ok_or("Optional header not found".to_string())?
                 .windows_fields
                 .size_of_headers
         {
@@ -94,7 +106,7 @@ impl PEContext {
         if file_offset
             < pe.header
                 .optional_header
-                .unwrap()
+                .ok_or("Optional header not found".to_string())?
                 .windows_fields
                 .size_of_headers
         {

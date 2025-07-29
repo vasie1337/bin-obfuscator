@@ -17,9 +17,14 @@ impl AnalyzerContext {
     }
 
     pub fn analyze(&mut self) -> Result<Vec<RuntimeFunction>, String> {
-        let pdb_functions = self.pdb_context.get_functions();
-        let pdb_functions = pdb_functions.iter().filter(|f| f.size > 5).collect::<Vec<_>>();
+        let pdb_functions = match self.pdb_context.get_functions() {
+            Ok(functions) => functions,
+            Err(e) => {
+                return Err(e.to_string());
+            }
+        };
 
+        let pdb_functions = pdb_functions.iter().filter(|f| f.size > 5).collect::<Vec<_>>();
         let mut runtime_functions = Vec::with_capacity(pdb_functions.len());
 
         for pdb_function in pdb_functions {
