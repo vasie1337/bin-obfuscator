@@ -146,12 +146,12 @@ fn main() {
     info!("x86-64 PE Binary Obfuscator v0.1.0");
 
     if let Err(e) = validate_file_exists(binary_path, "Binary") {
-        error!("{}", e);
+        error!("{e}");
         process::exit(1);
     }
 
     if let Err(e) = validate_file_exists(pdb_path, "PDB") {
-        error!("{}", e);
+        error!("{e}");
         process::exit(1);
     }
 
@@ -169,7 +169,7 @@ fn main() {
             data
         }
         Err(e) => {
-            error!("Failed to load binary: {}", e);
+            error!("Failed to load binary: {e}");
             process::exit(1);
         }
     };
@@ -180,7 +180,7 @@ fn main() {
             data
         }
         Err(e) => {
-            error!("Failed to load PDB: {}", e);
+            error!("Failed to load PDB: {e}");
             process::exit(1);
         }
     };
@@ -193,7 +193,7 @@ fn main() {
             data
         }
         Err(e) => {
-            error!("Obfuscation failed: {}", e);
+            error!("Obfuscation failed: {e}");
             process::exit(1);
         }
     };
@@ -201,7 +201,7 @@ fn main() {
     info!("Saving obfuscated binary...");
 
     if let Err(e) = save_file(&output_path, &obfuscated_data) {
-        error!("Failed to save output: {}", e);
+        error!("Failed to save output: {e}");
         process::exit(1);
     }
 
