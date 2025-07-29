@@ -1,11 +1,19 @@
 use iced_x86::{BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock};
 use parsers::pe::PEContext;
 
+#[derive(Clone)]
+pub struct OriginalFunctionState {
+    pub rva: u32,
+    pub size: u32,
+    pub instructions: Vec<Instruction>,
+}
+
 pub struct RuntimeFunction {
     pub name: String,
     pub rva: u32,
     pub size: u32,
     pub instructions: Vec<Instruction>,
+    pub original: Option<OriginalFunctionState>,
 }
 
 impl RuntimeFunction {
@@ -15,6 +23,7 @@ impl RuntimeFunction {
             rva,
             size,
             instructions: vec![],
+            original: None,
         }
     }
 
@@ -24,6 +33,30 @@ impl RuntimeFunction {
 
     pub fn update_size(&mut self, size: u32) {
         self.size = size;
+    }
+
+    pub fn capture_original_state(&mut self) {
+        self.original = Some(OriginalFunctionState {
+            rva: self.rva,
+            size: self.size,
+            instructions: self.instructions.clone(),
+        });
+    }
+
+    pub fn get_original(&self) -> Option<&OriginalFunctionState> {
+        self.original.as_ref()
+    }
+
+    pub fn get_original_rva(&self) -> u32 {
+        self.original.as_ref().map(|orig| orig.rva).unwrap_or(self.rva)
+    }
+
+    pub fn get_original_size(&self) -> u32 {
+        self.original.as_ref().map(|orig| orig.size).unwrap_or(self.size)
+    }
+
+    pub fn get_original_instructions(&self) -> &Vec<Instruction> {
+        self.original.as_ref().map(|orig| &orig.instructions).unwrap_or(&self.instructions)
     }
 
     pub fn decode(&mut self, pe_context: &PEContext) -> Result<(), String> {
