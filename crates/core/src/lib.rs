@@ -30,31 +30,33 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
 
     info!("PDB parsed successfully");
 
-    let mut analyzer_context = AnalyzerContext::new(pe_context.clone(), pdb_context);
-    let runtime_functions = analyzer_context.analyze().unwrap();
-
-    let all_instructions = runtime_functions.iter().flat_map(|f| f.instructions.iter()).copied().collect::<Vec<_>>();
-
-    // Apply obfuscation passes
-    info!("Applying obfuscation passes...");
     let pass_manager = passes::PassManager::default();
-    let transformed_instructions = pass_manager.run_passes(all_instructions);
 
-    for instruction in &transformed_instructions {
-        info!("Instruction: {}", instruction.to_string());
+    let mut analyzer_context = AnalyzerContext::new(pe_context.clone(), pdb_context);
+    let mut runtime_functions = analyzer_context.analyze().unwrap();
+
+    let section_base_rva = pe_context.get_next_section_rva().unwrap();
+
+    let mut current_rva = section_base_rva;
+    let mut merged_bytes = Vec::new();
+
+    for runtime_function in &mut runtime_functions {
+        let transformed_instructions = pass_manager.run_passes(runtime_function.instructions.clone());
+        runtime_function.instructions = transformed_instructions;
+
+        let function_bytes = runtime_function.encode(current_rva).unwrap();
+        merged_bytes.extend_from_slice(&function_bytes);
+
+        runtime_function.update_rva(current_rva as u32);
+        runtime_function.update_size(function_bytes.len() as u32);
+
+        info!("Encoded function {} with {} bytes at RVA {:#x}", runtime_function.name, function_bytes.len(), current_rva);
+
+        current_rva += function_bytes.len() as u64;
     }
 
-    let rva = pe_context.get_next_section_rva().unwrap();
-
-    // Instead of merging all function bytes, create a new block for each function
-    // and encode each function separately
-    let block = InstructionBlock::new(&transformed_instructions, rva);
-    let bytes = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
-        Ok(bytes) => bytes.code_buffer,
-        Err(e) => return Err(e.to_string()),
-    };
-
-    pe_context.create_executable_section(".vasie", &bytes).unwrap();
+    pe_context.create_executable_section(".vasie", &merged_bytes).unwrap();
+    info!("Created .vasie section with {} bytes", merged_bytes.len());
 
     Ok(pe_context.pe_data)
 }

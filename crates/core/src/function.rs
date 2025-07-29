@@ -1,27 +1,38 @@
-use iced_x86::{Decoder, Instruction};
-use parsers::pdb::PDBFunction;
+use iced_x86::{BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock};
 use parsers::pe::PEContext;
 
 pub struct RuntimeFunction {
-    pub pdb_function: PDBFunction,
+    pub name: String,
+    pub rva: u32,
+    pub size: u32,
     pub instructions: Vec<Instruction>,
 }
 
 impl RuntimeFunction {
-    pub fn new(pdb_function: PDBFunction) -> Self {
+    pub fn new(name: String, rva: u32, size: u32) -> Self {
         Self {
-            pdb_function,
+            name,
+            rva,
+            size,
             instructions: vec![],
         }
     }
 
+    pub fn update_rva(&mut self, rva: u32) {
+        self.rva = rva;
+    }
+
+    pub fn update_size(&mut self, size: u32) {
+        self.size = size;
+    }
+
     pub fn decode(&mut self, pe_context: &PEContext) -> Result<(), String> {
         let bytes = pe_context
-            .read_data_at_rva(self.pdb_function.rva, self.pdb_function.size as usize)
+            .read_data_at_rva(self.rva, self.size as usize)
             .map_err(|e| {
                 format!(
                     "Failed to read function bytes at RVA {:#x}: {}",
-                    self.pdb_function.rva, e
+                    self.rva, e
                 )
             })?;
 
@@ -31,7 +42,7 @@ impl RuntimeFunction {
         let mut decoder = Decoder::with_ip(
             64,
             &bytes,
-            self.pdb_function.rva as u64,
+            self.rva as u64,
             iced_x86::DecoderOptions::NONE,
         );
 
@@ -45,5 +56,14 @@ impl RuntimeFunction {
         self.instructions = instructions;
 
         Ok(())
+    }
+
+    pub fn encode(&self, rva: u64) -> Result<Vec<u8>, String> {
+        let block = InstructionBlock::new(&self.instructions, rva);
+        let bytes = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
+            Ok(bytes) => bytes.code_buffer,
+            Err(e) => return Err(e.to_string()),
+        };
+        Ok(bytes)
     }
 }
