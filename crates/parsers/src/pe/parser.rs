@@ -17,7 +17,7 @@ impl PEContext {
 
         let leaked_data: &'static [u8] = Box::leak(self.pe_data.clone().into_boxed_slice());
         let pe = PE::parse(leaked_data).map_err(|e| e.to_string())?;
-        
+
         *self.pe.borrow_mut() = Some(pe);
 
         if !self.is_supported() {
@@ -38,11 +38,17 @@ impl PEContext {
     fn get_pe_type(&self) -> PEType {
         let characteristics = self.with_pe(|pe| pe.header.coff_header.characteristics);
         if let Some(characteristics) = characteristics {
-            if characteristics & goblin::pe::characteristic::IMAGE_FILE_EXECUTABLE_IMAGE == goblin::pe::characteristic::IMAGE_FILE_EXECUTABLE_IMAGE {
+            if characteristics & goblin::pe::characteristic::IMAGE_FILE_EXECUTABLE_IMAGE
+                == goblin::pe::characteristic::IMAGE_FILE_EXECUTABLE_IMAGE
+            {
                 return PEType::EXE;
-            } else if characteristics & goblin::pe::characteristic::IMAGE_FILE_DLL == goblin::pe::characteristic::IMAGE_FILE_DLL {
+            } else if characteristics & goblin::pe::characteristic::IMAGE_FILE_DLL
+                == goblin::pe::characteristic::IMAGE_FILE_DLL
+            {
                 return PEType::DLL;
-            } else if characteristics & goblin::pe::characteristic::IMAGE_FILE_SYSTEM == goblin::pe::characteristic::IMAGE_FILE_SYSTEM {
+            } else if characteristics & goblin::pe::characteristic::IMAGE_FILE_SYSTEM
+                == goblin::pe::characteristic::IMAGE_FILE_SYSTEM
+            {
                 return PEType::SYS;
             }
         }
@@ -66,9 +72,6 @@ impl PEContext {
             return false;
         }
 
-        match pe_type {
-            PEType::EXE => true,
-            _ => false,
-        }
+        matches!(pe_type, PEType::EXE)
     }
 }
