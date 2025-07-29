@@ -2,6 +2,7 @@ use analyzer::AnalyzerContext;
 use common::{Logger, error, info};
 use parsers::pdb::PDBContext;
 use parsers::pe::PEContext;
+use iced_x86::{BlockEncoder, BlockEncoderOptions, InstructionBlock};
 
 pub mod analyzer;
 pub mod function;
@@ -26,10 +27,19 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
     info!("PDB parsed successfully");
 
     let mut analyzer_context = AnalyzerContext::new(pe_context.clone(), pdb_context);
-    let _runtime_functions = analyzer_context.analyze().unwrap();
+    let runtime_functions = analyzer_context.analyze().unwrap();
 
-    let sample_bytes = [0x90; 1024];
-    pe_context.create_executable_section("sample", &sample_bytes).unwrap();
+    let all_instructions = runtime_functions.iter().flat_map(|f| f.instructions.iter()).copied().collect::<Vec<_>>();
+    
+    let rva = pe_context.get_next_section_rva().unwrap();
+
+    let block = InstructionBlock::new(&all_instructions, rva);
+    let bytes = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
+        Ok(bytes) => bytes.code_buffer,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    pe_context.create_executable_section(".vasie", &bytes).unwrap();
 
     Ok(pe_context.pe_data)
 }

@@ -46,17 +46,4 @@ impl RuntimeFunction {
 
         Ok(())
     }
-
-    pub fn encode(&self, pe_context: &PEContext) -> Result<Vec<u8>, String> {
-        let next_section_rva = match pe_context.get_next_section_rva() {
-            Ok(rva) => rva,
-            Err(e) => return Err(e),
-        };
-
-        let block = InstructionBlock::new(&self.instructions, next_section_rva);
-        match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
-            Ok(bytes) => Ok(bytes.code_buffer),
-            Err(e) => Err(e.to_string()),
-        }
-    }
 }
