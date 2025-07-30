@@ -3,7 +3,6 @@ use symbolic::common::Name;
 use symbolic::debuginfo::pdb::PdbObject;
 use symbolic::demangle::{Demangle, DemangleOptions};
 
-// TODO: Add error handling
 impl PDBContext {
     pub fn new(pdb_data: Vec<u8>) -> Self {
         Self { pdb_data }
@@ -13,8 +12,13 @@ impl PDBContext {
         true
     }
 
-    pub fn get_functions(&self) -> Vec<PDBFunction> {
-        self.parse().unwrap()
+    pub fn get_functions(&self) -> Result<Vec<PDBFunction>, String> {
+        match self.parse() {
+            Ok(functions) => Ok(functions),
+            Err(e) => {
+                Err(e.to_string())
+            }
+        }
     }
 
     fn parse(&self) -> Result<Vec<PDBFunction>, String> {
