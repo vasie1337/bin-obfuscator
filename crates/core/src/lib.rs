@@ -7,6 +7,7 @@ use parsers::pe::PEContext;
 pub mod analyzer;
 pub mod function;
 pub mod compiler;
+pub mod passes;
 
 pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     Logger::ensure_init();

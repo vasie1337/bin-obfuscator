@@ -1,15 +1,18 @@
 use parsers::pe::PEContext;
 use crate::function::RuntimeFunction;
+use crate::passes::PassManager;
 use common::{debug, info};
 
 pub struct CompilerContext {
     pub pe_context: PEContext,
+    pub pass_manager: PassManager,
 }
 
 impl CompilerContext {
     pub fn new(pe_context: PEContext) -> Self {
         Self { 
             pe_context,
+            pass_manager: PassManager::default(),
         }
     }
 
@@ -25,8 +28,8 @@ impl CompilerContext {
         let mut merged_bytes = Vec::new();
 
         for runtime_function in runtime_functions.iter_mut() {
-            //let transformed_instructions = self.pass_manager.run_passes(runtime_function.instructions.clone());
-            //runtime_function.instructions = runtime_function.instructions.clone();
+            let transformed_instructions = self.pass_manager.run_passes(runtime_function.instructions.clone());
+            runtime_function.instructions = transformed_instructions;
 
             let function_bytes = runtime_function.encode(current_rva)
                 .map_err(|e| format!("Failed to encode function {}: {}", runtime_function.name, e))?;
