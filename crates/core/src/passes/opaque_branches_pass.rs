@@ -1,15 +1,12 @@
 use super::Pass;
-use iced_x86::{Code, Instruction, OpKind, Register, MemoryOperand};
+use iced_x86::{Code, Instruction, MemoryOperand, OpKind, Register};
 
-pub struct OpaqueBranchesPass {
-}
+pub struct OpaqueBranchesPass {}
 
 impl OpaqueBranchesPass {
     pub fn new() -> Self {
-        Self {
-        }
+        Self {}
     }
-
 }
 
 fn get_memory_operand(instruction: &Instruction) -> MemoryOperand {
@@ -18,7 +15,15 @@ fn get_memory_operand(instruction: &Instruction) -> MemoryOperand {
     let mem_scale = instruction.memory_index_scale();
     let mem_displ = instruction.memory_displacement64();
     let mem_seg = instruction.memory_segment();
-    MemoryOperand::new(mem_base, mem_index, mem_scale, mem_displ as i64, 8, false, mem_seg)
+    MemoryOperand::new(
+        mem_base,
+        mem_index,
+        mem_scale,
+        mem_displ as i64,
+        8,
+        false,
+        mem_seg,
+    )
 }
 
 impl Pass for OpaqueBranchesPass {
@@ -50,20 +55,20 @@ impl Pass for OpaqueBranchesPass {
                         //(OpKind::Memory, OpKind::Register) => {
                         //    let src_reg = instruction.op1_register();
                         //    let dest_mem = get_memory_operand(instruction);
-                        //    
+                        //
                         //    // Zero out the memory location
                         //    result.push(Instruction::with2(Code::Xor_rm64_imm32, dest_mem, 0).unwrap());
                         //    result.push(Instruction::with(Code::Clc));
                         //    result.push(Instruction::with2(Code::Adc_rm64_r64, dest_mem, src_reg).unwrap());
                         //    println!("instruction: {:?}", instruction);
                         //}
-	                    //(OpKind::Register, OpKind::Memory) => {
+                        //(OpKind::Register, OpKind::Memory) => {
                         //    let dest_reg = instruction.op0_register();
                         //    let src_mem = get_memory_operand(instruction);
-                        //    
+                        //
                         //    result.push(Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap());
                         //    result.push(Instruction::with(Code::Clc));
-                        //    result.push(Instruction::with2(Code::Adcx_r64_rm64, dest_reg, src_mem).unwrap());	                    
+                        //    result.push(Instruction::with2(Code::Adcx_r64_rm64, dest_reg, src_mem).unwrap());
                         //}
                         _ => {
                             result.push(*instruction);

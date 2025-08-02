@@ -1,5 +1,5 @@
-use common::{info}   ;
 use crate::function::RuntimeFunction;
+use common::info;
 use iced_x86::Instruction;
 
 pub mod opaque_branches_pass;
@@ -28,7 +28,6 @@ impl PassManager {
     pub fn run_passes(&self, runtime_function: &mut RuntimeFunction, count: usize) {
         for _ in 0..count {
             for pass in &self.passes {
-                info!("Function: {:?}", runtime_function.name);
                 runtime_function.instructions = pass.apply(&runtime_function.instructions);
             }
         }

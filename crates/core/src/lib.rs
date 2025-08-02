@@ -1,42 +1,50 @@
 use analyzer::AnalyzerContext;
 use common::{Logger, error, info};
-use compiler::CompilerContext;
+use function::RuntimeFunction;
 use parsers::pdb::PDBContext;
 use parsers::pe::PEContext;
+use compiler::CompilerContext;
+use obfuscator::Obfuscator;
+use std::cell::RefCell;
 
 pub mod analyzer;
-pub mod compiler;
 pub mod function;
 pub mod passes;
+pub mod compiler;
+pub mod obfuscator;
 
-pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
+pub struct CoreContext {
+    pub pe_context: RefCell<PEContext>,
+    pub pdb_context: RefCell<PDBContext>,
+}
+
+impl CoreContext {
+    pub fn new(pe_context: PEContext, pdb_context: PDBContext) -> Self {
+        Self { pe_context: RefCell::new(pe_context), pdb_context: RefCell::new(pdb_context) }
+    }
+}
+
+pub fn run(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     Logger::ensure_init();
 
-    let pe_context = parse_and_validate_pe(binary_data)?;
-    info!("PE parsed successfully");
+    let core_context = CoreContext::new(parse_and_validate_pe(binary_data)?, parse_and_validate_pdb(pdb_data)?);
+    info!("Parsed PE and PDB");
 
-    let pdb_context = parse_and_validate_pdb(pdb_data)?;
-    info!("PDB parsed successfully");
-
-    let mut analyzer_context = AnalyzerContext::new(pe_context.clone(), pdb_context);
-    let mut runtime_functions = analyzer_context
-        .analyze()
-        .map_err(|e| format!("Analysis failed: {}", e))?;
-
+    let mut runtime_functions = analyze_binary(&core_context)?;
     info!("Analyzed {} runtime functions", runtime_functions.len());
 
-    let mut compiler_context = CompilerContext::new(pe_context);
-    compiler_context.compile_functions(&mut runtime_functions)?;
+    obfuscate_binary(&mut runtime_functions)?;
+    info!("Obfuscated {} runtime functions", runtime_functions.len());
 
+    let binary_data = compile_binary(&core_context, &mut runtime_functions)?;
     info!("Compiled {} runtime functions", runtime_functions.len());
 
-    Ok(compiler_context.get_binary_data())
+    Ok(binary_data)
 }
 
 fn parse_and_validate_pe(binary_data: &[u8]) -> Result<PEContext, String> {
     let pe_context = PEContext::new(binary_data.to_vec());
     if !pe_context.is_supported() {
-        error!("PE is not supported");
         return Err("PE is not supported".to_string());
     }
     Ok(pe_context)
@@ -45,8 +53,25 @@ fn parse_and_validate_pe(binary_data: &[u8]) -> Result<PEContext, String> {
 fn parse_and_validate_pdb(pdb_data: &[u8]) -> Result<PDBContext, String> {
     let pdb_context = PDBContext::new(pdb_data.to_vec());
     if !pdb_context.is_supported() {
-        error!("PDB is not supported");
         return Err("PDB is not supported".to_string());
     }
     Ok(pdb_context)
+}
+
+fn analyze_binary(core_context: &CoreContext) -> Result<Vec<RuntimeFunction>, String> {
+    let mut analyzer_context = AnalyzerContext::new(core_context);
+    let runtime_functions = analyzer_context.analyze()?;
+    Ok(runtime_functions)
+}
+
+fn obfuscate_binary(functions: &mut Vec<RuntimeFunction>) -> Result<(), String> {
+    let obfuscator = Obfuscator::new();
+    obfuscator.obfuscate(functions)?;
+    Ok(())
+}
+
+fn compile_binary(core_context: &CoreContext, functions: &mut Vec<RuntimeFunction>) -> Result<Vec<u8>, String> {
+    let mut compiler_context = CompilerContext::new(core_context.pe_context.borrow().clone());
+    let binary_data = compiler_context.compile_functions(functions)?;
+    Ok(binary_data)
 }

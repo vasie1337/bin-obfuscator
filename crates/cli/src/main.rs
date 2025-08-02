@@ -187,7 +187,7 @@ fn main() {
 
     info!("Starting obfuscation process...");
 
-    let obfuscated_data = match core::obfuscate_binary(&pe_data, &pdb_data) {
+    let obfuscated_data = match core::run(&pe_data, &pdb_data) {
         Ok(data) => {
             info!("Obfuscation completed successfully");
             data
