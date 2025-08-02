@@ -7,6 +7,7 @@ use parsers::pdb::PDBContext;
 use parsers::pe::PEContext;
 use std::cell::RefCell;
 use std::rc::Rc;
+use instant::Instant;
 
 pub mod analyzer;
 pub mod compiler;
@@ -31,6 +32,8 @@ impl CoreContext {
 pub fn run(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     Logger::ensure_init();
 
+    let start_time = Instant::now();
+
     let pe_context = parse_and_validate_pe(binary_data)?;
     let pdb_context = parse_and_validate_pdb(pdb_data)?;
     let core_context = CoreContext::new(pe_context, pdb_context);
@@ -44,6 +47,13 @@ pub fn run(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
 
     let binary_data = compile_binary(&core_context, &mut runtime_functions)?;
     info!("Compiled {} functions", runtime_functions.len());
+
+    let elapsed = start_time.elapsed();
+    info!(
+        "Completed in {:.2}ms ({:.6}s)", 
+        elapsed.as_secs_f64() * 1000.0,
+        elapsed.as_secs_f64()
+    );
 
     Ok(binary_data)
 }
@@ -70,7 +80,7 @@ fn analyze_binary(core_context: &CoreContext) -> Result<Vec<RuntimeFunction>, St
     Ok(runtime_functions)
 }
 
-fn obfuscate_binary(functions: &mut Vec<RuntimeFunction>) -> Result<(), String> {
+fn obfuscate_binary(functions: &mut Vec<RuntimeFunction>) -> Result<(), String> {    
     let obfuscator = Obfuscator::new();
     obfuscator.obfuscate(functions)?;
     Ok(())
