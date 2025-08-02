@@ -1,34 +1,34 @@
 use super::Pass;
-use iced_x86::{Code, Instruction, MemoryOperand, OpKind, Register};
+use iced_x86::{Code, Instruction, MemoryOperand, OpKind};
 
-pub struct OpaqueBranchesPass {}
+pub struct MutationPass {}
 
-impl OpaqueBranchesPass {
+impl MutationPass {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-fn get_memory_operand(instruction: &Instruction) -> MemoryOperand {
-    let mem_base = instruction.memory_base();
-    let mem_index = instruction.memory_index();
-    let mem_scale = instruction.memory_index_scale();
-    let mem_displ = instruction.memory_displacement64();
-    let mem_seg = instruction.memory_segment();
-    MemoryOperand::new(
-        mem_base,
-        mem_index,
-        mem_scale,
-        mem_displ as i64,
-        8,
-        false,
-        mem_seg,
-    )
-}
+//fn get_memory_operand(instruction: &Instruction) -> MemoryOperand {
+//    let mem_base = instruction.memory_base();
+//    let mem_index = instruction.memory_index();
+//    let mem_scale = instruction.memory_index_scale();
+//    let mem_displ = instruction.memory_displacement64();
+//    let mem_seg = instruction.memory_segment();
+//    MemoryOperand::new(
+//        mem_base,
+//        mem_index,
+//        mem_scale,
+//        mem_displ as i64,
+//        8,
+//        false,
+//        mem_seg,
+//    )
+//}
 
-impl Pass for OpaqueBranchesPass {
+impl Pass for MutationPass {
     fn name(&self) -> &'static str {
-        "Opaque Branches Pass"
+        "Mutation Pass"
     }
 
     fn apply(&self, instructions: &[Instruction]) -> Vec<Instruction> {

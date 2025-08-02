@@ -2,6 +2,7 @@ use iced_x86::{
     BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock, Mnemonic,
 };
 use parsers::pe::PEContext;
+use parsers::pdb::PDBFunction;
 
 #[derive(Clone)]
 pub struct OriginalFunctionState {
@@ -19,11 +20,11 @@ pub struct RuntimeFunction {
 }
 
 impl RuntimeFunction {
-    pub fn new(name: String, rva: u32, size: u32) -> Self {
+    pub fn new(pdb_function: &PDBFunction) -> Self {
         Self {
-            name,
-            rva,
-            size,
+            name: pdb_function.name.clone(),
+            rva: pdb_function.rva,
+            size: pdb_function.size,
             instructions: vec![],
             original: None,
         }

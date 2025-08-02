@@ -1,13 +1,15 @@
 use crate::function::RuntimeFunction;
 use common::{debug, info};
 use parsers::pe::PEContext;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct CompilerContext {
-    pub pe_context: PEContext,
+    pub pe_context: Rc<RefCell<PEContext>>,
 }
 
 impl CompilerContext {
-    pub fn new(pe_context: PEContext) -> Self {
+    pub fn new(pe_context: Rc<RefCell<PEContext>>) -> Self {
         Self {
             pe_context,
         }
@@ -16,6 +18,7 @@ impl CompilerContext {
     pub fn compile_functions(&mut self, runtime_functions: &mut Vec<RuntimeFunction>) -> Result<Vec<u8>, String> {
         let section_base_rva = self
             .pe_context
+            .borrow()
             .get_next_section_rva()
             .map_err(|e| format!("Failed to get next section RVA: {}", e))?;
 
@@ -58,6 +61,7 @@ impl CompilerContext {
         self.patch_function_redirects(runtime_functions)?;
 
         self.pe_context
+            .borrow_mut()
             .create_executable_section(".vasie", &merged_bytes)
             .map_err(|e| format!("Failed to create executable section: {}", e))?;
 
@@ -82,6 +86,7 @@ impl CompilerContext {
             jmp_bytes[1..].copy_from_slice(&rel32.to_le_bytes());
 
             self.pe_context
+                .borrow_mut()
                 .write_data_at_rva(src_rva, &jmp_bytes)
                 .map_err(|e| format!("Failed to patch JMP at {:#x}: {}", src_rva, e))?;
 
@@ -97,6 +102,6 @@ impl CompilerContext {
     }
 
     pub fn get_binary_data(self) -> Vec<u8> {
-        self.pe_context.pe_data
+        self.pe_context.borrow().pe_data.clone()
     }
 }

@@ -1,8 +1,7 @@
 use crate::function::RuntimeFunction;
-use common::info;
 use iced_x86::Instruction;
 
-pub mod opaque_branches_pass;
+pub mod mutation;
 
 pub trait Pass {
     fn name(&self) -> &'static str;
@@ -35,7 +34,7 @@ impl PassManager {
 
     pub fn default() -> Self {
         let mut manager = Self::new();
-        manager.add_pass(Box::new(opaque_branches_pass::OpaqueBranchesPass::new()));
+        manager.add_pass(Box::new(mutation::MutationPass::new()));
         manager
     }
 }
