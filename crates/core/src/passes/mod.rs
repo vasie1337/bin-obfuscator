@@ -1,11 +1,10 @@
 use crate::function::RuntimeFunction;
-use iced_x86::Instruction;
-
+use common::error;
 pub mod mutation;
 
 pub trait Pass {
     fn name(&self) -> &'static str;
-    fn apply(&self, instructions: &[Instruction]) -> Vec<Instruction>;
+    fn apply(&self, runtime_function: &mut RuntimeFunction) -> Result<(), String>;
     fn enabled_by_default(&self) -> bool {
         true
     }
@@ -27,7 +26,12 @@ impl PassManager {
     pub fn run_passes(&self, runtime_function: &mut RuntimeFunction, count: usize) {
         for _ in 0..count {
             for pass in &self.passes {
-                runtime_function.instructions = pass.apply(&runtime_function.instructions);
+                match pass.apply(runtime_function) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        error!("Failed to apply pass {}: {}", pass.name(), e);
+                    }
+                }
             }
         }
     }

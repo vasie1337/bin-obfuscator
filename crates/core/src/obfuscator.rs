@@ -27,8 +27,6 @@ impl Obfuscator {
             runtime_function.capture_original_state();
 
             self.pass_manager.run_passes(runtime_function, 1);
-
-            info!("Obfuscated function: {}", runtime_function.name);
         }
 
         info!(

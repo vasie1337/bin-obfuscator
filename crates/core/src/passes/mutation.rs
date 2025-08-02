@@ -1,4 +1,5 @@
 use super::Pass;
+use crate::function::RuntimeFunction;
 use iced_x86::{Code, Instruction, OpKind};
 
 pub struct MutationPass {}
@@ -31,10 +32,10 @@ impl Pass for MutationPass {
         "Mutation Pass"
     }
 
-    fn apply(&self, instructions: &[Instruction]) -> Vec<Instruction> {
-        let mut result = Vec::with_capacity(instructions.len() * 3);
+    fn apply(&self, function: &mut RuntimeFunction) -> Result<(), String> {
+        let mut result = Vec::with_capacity(function.instructions.len() * 3);
 
-        for instruction in instructions.iter() {
+        for instruction in function.instructions.iter() {
             match instruction.code() {
                 Code::Mov_r64_rm64 | Code::Mov_rm64_r64 => {
                     let op_kinds: Vec<OpKind> = instruction.op_kinds().collect();
@@ -52,16 +53,15 @@ impl Pass for MutationPass {
                                 Instruction::with2(Code::Adcx_r64_rm64, dest_reg, src_reg).unwrap(),
                             );
                         }
-                        //(OpKind::Memory, OpKind::Register) => {
-                        //    let src_reg = instruction.op1_register();
-                        //    let dest_mem = get_memory_operand(instruction);
-                        //
-                        //    // Zero out the memory location
-                        //    result.push(Instruction::with2(Code::Xor_rm64_imm32, dest_mem, 0).unwrap());
-                        //    result.push(Instruction::with(Code::Clc));
-                        //    result.push(Instruction::with2(Code::Adc_rm64_r64, dest_mem, src_reg).unwrap());
-                        //    println!("instruction: {:?}", instruction);
-                        //}
+                        (OpKind::Memory, OpKind::Register) => {
+                            //let src_reg = instruction.op1_register();
+                            //let dest_mem = get_memory_operand(instruction);
+                            //// Zero out the memory location
+                            //result.push(Instruction::with2(Code::Xor_rm64_imm32, dest_mem, 0).unwrap());
+                            //result.push(Instruction::with(Code::Clc));
+                            //result.push(Instruction::with2(Code::Adc_rm64_r64, dest_mem, src_reg).unwrap());
+                            //println!("{}: {:?}", function.name, instruction);
+                        }
                         //(OpKind::Register, OpKind::Memory) => {
                         //    let dest_reg = instruction.op0_register();
                         //    let src_mem = get_memory_operand(instruction);
@@ -81,7 +81,8 @@ impl Pass for MutationPass {
             }
         }
 
-        result
+        function.instructions = result;
+        Ok(())
     }
 
     fn enabled_by_default(&self) -> bool {
