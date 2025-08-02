@@ -1,8 +1,8 @@
 use iced_x86::{
     BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock, Mnemonic,
 };
-use parsers::pe::PEContext;
 use parsers::pdb::PDBFunction;
+use parsers::pe::PEContext;
 
 #[derive(Clone)]
 pub struct OriginalFunctionState {

@@ -1,9 +1,9 @@
 use crate::{CoreContext, function::RuntimeFunction};
+use common::error;
 use parsers::pdb::PDBContext;
 use parsers::pe::PEContext;
 use std::cell::RefCell;
 use std::rc::Rc;
-use common::error;
 
 pub struct AnalyzerContext {
     pub pe_context: Rc<RefCell<PEContext>>,
@@ -35,7 +35,10 @@ impl AnalyzerContext {
                 match runtime_function.decode(&self.pe_context.borrow()) {
                     Ok(_) => Some(runtime_function),
                     Err(e) => {
-                        error!("Failed to analyze function {:#x} {}: {}", pdb_function.rva, pdb_function.name, e);
+                        error!(
+                            "Failed to analyze function {:#x} {}: {}",
+                            pdb_function.rva, pdb_function.name, e
+                        );
                         None
                     }
                 }

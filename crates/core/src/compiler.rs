@@ -10,12 +10,13 @@ pub struct CompilerContext {
 
 impl CompilerContext {
     pub fn new(pe_context: Rc<RefCell<PEContext>>) -> Self {
-        Self {
-            pe_context,
-        }
+        Self { pe_context }
     }
 
-    pub fn compile_functions(&mut self, runtime_functions: &mut Vec<RuntimeFunction>) -> Result<Vec<u8>, String> {
+    pub fn compile_functions(
+        &mut self,
+        runtime_functions: &mut Vec<RuntimeFunction>,
+    ) -> Result<Vec<u8>, String> {
         let section_base_rva = self
             .pe_context
             .borrow()

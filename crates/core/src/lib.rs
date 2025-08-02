@@ -1,18 +1,18 @@
 use analyzer::AnalyzerContext;
 use common::{Logger, info};
+use compiler::CompilerContext;
 use function::RuntimeFunction;
+use obfuscator::Obfuscator;
 use parsers::pdb::PDBContext;
 use parsers::pe::PEContext;
-use compiler::CompilerContext;
-use obfuscator::Obfuscator;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub mod analyzer;
-pub mod function;
-pub mod passes;
 pub mod compiler;
+pub mod function;
 pub mod obfuscator;
+pub mod passes;
 
 pub struct CoreContext {
     pub pe_context: Rc<RefCell<PEContext>>,
@@ -21,7 +21,10 @@ pub struct CoreContext {
 
 impl CoreContext {
     pub fn new(pe_context: Rc<RefCell<PEContext>>, pdb_context: Rc<RefCell<PDBContext>>) -> Self {
-        Self { pe_context, pdb_context }
+        Self {
+            pe_context,
+            pdb_context,
+        }
     }
 }
 
@@ -73,7 +76,10 @@ fn obfuscate_binary(functions: &mut Vec<RuntimeFunction>) -> Result<(), String> 
     Ok(())
 }
 
-fn compile_binary(core_context: &CoreContext, functions: &mut Vec<RuntimeFunction>) -> Result<Vec<u8>, String> {
+fn compile_binary(
+    core_context: &CoreContext,
+    functions: &mut Vec<RuntimeFunction>,
+) -> Result<Vec<u8>, String> {
     let mut compiler_context = CompilerContext::new(core_context.pe_context.clone());
     compiler_context.compile_functions(functions)?;
     Ok(compiler_context.get_binary_data())

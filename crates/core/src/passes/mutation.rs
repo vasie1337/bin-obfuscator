@@ -1,5 +1,5 @@
 use super::Pass;
-use iced_x86::{Code, Instruction, MemoryOperand, OpKind};
+use iced_x86::{Code, Instruction, OpKind};
 
 pub struct MutationPass {}
 
