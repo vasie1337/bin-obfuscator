@@ -1,7 +1,7 @@
-use parsers::pe::PEContext;
 use crate::function::RuntimeFunction;
 use crate::passes::PassManager;
 use common::{debug, info};
+use parsers::pe::PEContext;
 
 pub struct CompilerContext {
     pub pe_context: PEContext,
@@ -10,38 +10,50 @@ pub struct CompilerContext {
 
 impl CompilerContext {
     pub fn new(pe_context: PEContext) -> Self {
-        Self { 
+        Self {
             pe_context,
             pass_manager: PassManager::default(),
         }
     }
 
-    pub fn compile_functions(&mut self, runtime_functions: &mut Vec<RuntimeFunction>) -> Result<Vec<u8>, String> {
+    pub fn compile_functions(
+        &mut self,
+        runtime_functions: &mut Vec<RuntimeFunction>,
+    ) -> Result<Vec<u8>, String> {
         for runtime_function in runtime_functions.iter_mut() {
             runtime_function.capture_original_state();
         }
 
-        let section_base_rva = self.pe_context.get_next_section_rva()
+        let section_base_rva = self
+            .pe_context
+            .get_next_section_rva()
             .map_err(|e| format!("Failed to get next section RVA: {}", e))?;
 
         let mut current_rva = section_base_rva;
         let mut merged_bytes = Vec::new();
 
         for runtime_function in runtime_functions.iter_mut() {
-            let transformed_instructions = self.pass_manager.run_passes(runtime_function.instructions.clone(), 2);
+            let transformed_instructions = self
+                .pass_manager
+                .run_passes(runtime_function.instructions.clone(), 3);
             runtime_function.instructions = transformed_instructions;
 
-            let function_bytes = runtime_function.encode(current_rva)
-                .map_err(|e| format!("Failed to encode function {}: {}", runtime_function.name, e))?;
-            
+            let function_bytes = runtime_function.encode(current_rva).map_err(|e| {
+                format!("Failed to encode function {}: {}", runtime_function.name, e)
+            })?;
+
             merged_bytes.extend_from_slice(&function_bytes);
 
             runtime_function.update_rva(current_rva as u32);
             runtime_function.update_size(function_bytes.len() as u32);
 
-            debug!("Encoded function {} with {} bytes at RVA {:#x}", 
-                  runtime_function.name, function_bytes.len(), current_rva);
-            
+            debug!(
+                "Encoded function {} with {} bytes at RVA {:#x}",
+                runtime_function.name,
+                function_bytes.len(),
+                current_rva
+            );
+
             if let Some(original) = runtime_function.get_original() {
                 debug!(
                     "Function {} transformation: original RVA {:#x} -> new RVA {:#x}, original size {} -> new size {}, instructions {} -> {}",
@@ -60,15 +72,19 @@ impl CompilerContext {
 
         self.patch_function_redirects(runtime_functions)?;
 
-        self.pe_context.create_executable_section(".vasie", &merged_bytes)
+        self.pe_context
+            .create_executable_section(".vasie", &merged_bytes)
             .map_err(|e| format!("Failed to create executable section: {}", e))?;
-        
+
         info!("Created .vasie section with {} bytes", merged_bytes.len());
 
         Ok(merged_bytes)
     }
 
-    fn patch_function_redirects(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
+    fn patch_function_redirects(
+        &mut self,
+        runtime_functions: &[RuntimeFunction],
+    ) -> Result<(), String> {
         for runtime_function in runtime_functions {
             let src_rva = runtime_function.get_original_rva();
             let dst_rva = runtime_function.rva;
@@ -80,10 +96,11 @@ impl CompilerContext {
             jmp_bytes[0] = 0xE9;
             jmp_bytes[1..].copy_from_slice(&rel32.to_le_bytes());
 
-            self.pe_context.write_data_at_rva(src_rva, &jmp_bytes)
+            self.pe_context
+                .write_data_at_rva(src_rva, &jmp_bytes)
                 .map_err(|e| format!("Failed to patch JMP at {:#x}: {}", src_rva, e))?;
 
-                debug!(
+            debug!(
                 "Patched JMP at 0x{:x} to 0x{:x} (rel_offset: 0x{:x})",
                 src_rva, dst_rva, rel32
             );

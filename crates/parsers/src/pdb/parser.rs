@@ -15,9 +15,7 @@ impl PDBContext {
     pub fn get_functions(&self) -> Result<Vec<PDBFunction>, String> {
         match self.parse() {
             Ok(functions) => Ok(functions),
-            Err(e) => {
-                Err(e.to_string())
-            }
+            Err(e) => Err(e.to_string()),
         }
     }
 

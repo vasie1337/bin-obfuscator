@@ -24,7 +24,10 @@ impl AnalyzerContext {
             }
         };
 
-        let pdb_functions = pdb_functions.iter().filter(|f| f.size > 5).collect::<Vec<_>>();
+        let pdb_functions = pdb_functions
+            .iter()
+            .filter(|f| f.size > 5)
+            .collect::<Vec<_>>();
         let mut runtime_functions = Vec::with_capacity(pdb_functions.len());
 
         for pdb_function in pdb_functions {
@@ -32,9 +35,10 @@ impl AnalyzerContext {
             if function_name != "main" {
                 continue;
             }
-            
+
             let function_rva = pdb_function.rva;
-            let mut runtime_function = RuntimeFunction::new(function_name, function_rva, pdb_function.size);
+            let mut runtime_function =
+                RuntimeFunction::new(function_name, function_rva, pdb_function.size);
             match runtime_function.decode(&self.pe_context) {
                 Ok(_) => runtime_functions.push(runtime_function),
                 Err(e) => {

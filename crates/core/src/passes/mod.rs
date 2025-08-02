@@ -17,15 +17,13 @@ pub struct PassManager {
 
 impl PassManager {
     pub fn new() -> Self {
-        Self {
-            passes: Vec::new(),
-        }
+        Self { passes: Vec::new() }
     }
-    
+
     pub fn add_pass(&mut self, pass: Box<dyn Pass>) {
         self.passes.push(pass);
     }
-    
+
     pub fn run_passes(&self, mut instructions: Vec<Instruction>, count: usize) -> Vec<Instruction> {
         for _ in 0..count {
             for pass in &self.passes {
@@ -35,7 +33,7 @@ impl PassManager {
         }
         instructions
     }
-    
+
     pub fn default() -> Self {
         let mut manager = Self::new();
         manager.add_pass(Box::new(opaque_branches_pass::OpaqueBranchesPass::new()));
@@ -47,4 +45,4 @@ impl Default for PassManager {
     fn default() -> Self {
         Self::default()
     }
-} 
+}

@@ -1,4 +1,6 @@
-use iced_x86::{BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock, Mnemonic};
+use iced_x86::{
+    BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock, Mnemonic,
+};
 use parsers::pe::PEContext;
 
 #[derive(Clone)]
@@ -48,15 +50,24 @@ impl RuntimeFunction {
     }
 
     pub fn get_original_rva(&self) -> u32 {
-        self.original.as_ref().map(|orig| orig.rva).unwrap_or(self.rva)
+        self.original
+            .as_ref()
+            .map(|orig| orig.rva)
+            .unwrap_or(self.rva)
     }
 
     pub fn get_original_size(&self) -> u32 {
-        self.original.as_ref().map(|orig| orig.size).unwrap_or(self.size)
+        self.original
+            .as_ref()
+            .map(|orig| orig.size)
+            .unwrap_or(self.size)
     }
 
     pub fn get_original_instructions(&self) -> &Vec<Instruction> {
-        self.original.as_ref().map(|orig| &orig.instructions).unwrap_or(&self.instructions)
+        self.original
+            .as_ref()
+            .map(|orig| &orig.instructions)
+            .unwrap_or(&self.instructions)
     }
 
     pub fn decode(&mut self, pe_context: &PEContext) -> Result<(), String> {
@@ -72,12 +83,8 @@ impl RuntimeFunction {
         let estimated_instruction_count = (bytes.len() / 3).max(16);
         let mut instructions = Vec::with_capacity(estimated_instruction_count);
 
-        let mut decoder = Decoder::with_ip(
-            64,
-            &bytes,
-            self.rva as u64,
-            iced_x86::DecoderOptions::NONE,
-        );
+        let mut decoder =
+            Decoder::with_ip(64, &bytes, self.rva as u64, iced_x86::DecoderOptions::NONE);
 
         while decoder.can_decode() {
             let instruction = decoder.decode();

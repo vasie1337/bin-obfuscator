@@ -1,12 +1,12 @@
 use analyzer::AnalyzerContext;
-use compiler::CompilerContext;
 use common::{Logger, error, info};
+use compiler::CompilerContext;
 use parsers::pdb::PDBContext;
 use parsers::pe::PEContext;
 
 pub mod analyzer;
-pub mod function;
 pub mod compiler;
+pub mod function;
 pub mod passes;
 
 pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
@@ -19,7 +19,8 @@ pub fn obfuscate_binary(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, 
     info!("PDB parsed successfully");
 
     let mut analyzer_context = AnalyzerContext::new(pe_context.clone(), pdb_context);
-    let mut runtime_functions = analyzer_context.analyze()
+    let mut runtime_functions = analyzer_context
+        .analyze()
         .map_err(|e| format!("Analysis failed: {}", e))?;
 
     info!("Analyzed {} runtime functions", runtime_functions.len());

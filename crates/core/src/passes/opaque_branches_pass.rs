@@ -1,6 +1,5 @@
-use iced_x86::{Instruction, Code, Register};
 use super::Pass;
-
+use iced_x86::{Code, Instruction, OpKind, Register, MemoryOperand};
 
 pub struct OpaqueBranchesPass {
 }
@@ -11,97 +10,114 @@ impl OpaqueBranchesPass {
         }
     }
 
-    // Creates an opaque predicate that always evaluates to true but is hard to analyze statically
-    fn create_opaque_branch_sequence(&self, label_id: u64) -> Vec<Instruction> {
-        let mut instructions = Vec::new();
-        
-        instructions.push(Instruction::with(Code::Pushfq));
-        
-        instructions.push(Instruction::with1(Code::Push_r64, Register::RAX).unwrap());
-        instructions.push(Instruction::with1(Code::Pop_r64, Register::RAX).unwrap());
-        
-        //// XOR EAX with itself (always results in 0, sets ZF=1)
-        instructions.push(Instruction::with2(Code::Xor_r32_rm32, Register::EAX, Register::EAX).unwrap());
-        //
-        //// Restore flags to make analysis harder
-        instructions.push(Instruction::with(Code::Popfq));
-        //
-        //// Save flags again for our opaque condition
-        instructions.push(Instruction::with(Code::Pushfq));
-        //
-        //// Create another opaque condition - move 1 to ECX and test it (always non-zero)
-        instructions.push(Instruction::with1(Code::Push_r64, Register::RCX).unwrap());
-        instructions.push(Instruction::with2(Code::Mov_r32_imm32, Register::ECX, 1u32).unwrap());
-        instructions.push(Instruction::with2(Code::Test_rm32_r32, Register::ECX, Register::ECX).unwrap());
-        instructions.push(Instruction::with1(Code::Pop_r64, Register::RCX).unwrap());
-        
-        // Always taken branch (JNZ after testing 1, which clears ZF, so JNZ will jump)
-        instructions.push(Instruction::with_branch(Code::Jae_rel32_64, label_id).unwrap());
-        
-        // Dead code that should never execute 
-        instructions.push(Instruction::with1(Code::Push_r64, Register::RAX).unwrap());
-        instructions.push(Instruction::with1(Code::Pop_r64, Register::RAX).unwrap());
+}
 
-        instructions.push(Instruction::with_branch(Code::Jne_rel32_64, label_id).unwrap());
-        
-        // XOR EAX with itself (always results in 0, sets ZF=1)
-        instructions.push(Instruction::with2(Code::Xor_r32_rm32, Register::EAX, Register::EAX).unwrap());
-        
-        // Restore flags to make analysis harder
-        instructions.push(Instruction::with(Code::Popfq));
-
-        instructions.push(Instruction::with1(Code::Push_r64, Register::RAX).unwrap());
-        instructions.push(Instruction::with1(Code::Pop_r64, Register::RAX).unwrap());
-
-        instructions.push(Instruction::with_branch(Code::Jne_rel32_64, label_id).unwrap());
-
-        instructions.push(Instruction::with_branch(Code::Jne_rel32_64, label_id).unwrap()); // Jump to the same label as other branches
-        
-        // XOR EAX with itself (always results in 0, sets ZF=1)
-        instructions.push(Instruction::with2(Code::Xor_r32_rm32, Register::EAX, Register::EAX).unwrap());
-        
-        // Restore flags to make analysis harder
-        instructions.push(Instruction::with(Code::Popfq));
-
-        instructions.push(Instruction::with_branch(Code::Jne_rel32_64, label_id).unwrap());
-        
-        // Label for the always-taken branch (this is where execution continues)
-        let mut label_instr = Instruction::with(Code::Nopd);
-        label_instr.set_ip(label_id);
-        instructions.push(label_instr);
-        
-        // Restore flags
-        instructions.push(Instruction::with(Code::Popfq));
-        
-        instructions
-    }
-
+fn get_memory_operand(instruction: &Instruction) -> MemoryOperand {
+    let mem_base = instruction.memory_base();
+    let mem_index = instruction.memory_index();
+    let mem_scale = instruction.memory_index_scale();
+    let mem_displ = instruction.memory_displacement64();
+    let mem_seg = instruction.memory_segment();
+    MemoryOperand::new(mem_base, mem_index, mem_scale, mem_displ as i64, 8, false, mem_seg)
 }
 
 impl Pass for OpaqueBranchesPass {
     fn name(&self) -> &'static str {
         "Opaque Branches Pass"
     }
-    
+
     fn apply(&self, instructions: &[Instruction]) -> Vec<Instruction> {
         let mut result = Vec::with_capacity(instructions.len() * 3);
-        let mut label_counter = 0x1000u64; // Start labels at a high offset to avoid conflicts
-        
-        for (i, instruction) in instructions.iter().enumerate() {            
-            if i < instructions.len() - 1 && i % 15 == 0 { // Every 15th instruction for simple branches
-                let label_id = label_counter;
-                label_counter += 1;
-                
-                let opaque_sequence = self.create_opaque_branch_sequence(label_id);
-                result.extend(opaque_sequence);
+
+        for instruction in instructions.iter() {
+            match instruction.code() {
+                Code::Mov_r64_rm64 | Code::Mov_rm64_r64 => {
+                    let op_kinds: Vec<OpKind> = instruction.op_kinds().collect();
+
+                    match (op_kinds[0], op_kinds[1]) {
+                        (OpKind::Register, OpKind::Register) => {
+                            let dest_reg = instruction.op0_register();
+                            let src_reg = instruction.op1_register();
+
+                            result.push(
+                                Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap(),
+                            );
+                            result.push(Instruction::with(Code::Clc));
+                            result.push(
+                                Instruction::with2(Code::Adcx_r64_rm64, dest_reg, src_reg).unwrap(),
+                            );
+                        }
+                        (OpKind::Memory, OpKind::Register) => {
+                            let src_reg = instruction.op1_register();
+                            
+                            let dest_mem = get_memory_operand(instruction);
+                            
+                            result.push(Instruction::with1(Code::Push_rm64, dest_mem).unwrap());
+                            result.push(Instruction::with2(Code::Xchg_rm64_r64, dest_mem, src_reg).unwrap());
+                            result.push(Instruction::with2(Code::Xchg_rm64_r64, dest_mem, src_reg).unwrap());
+                            result.push(Instruction::with1(Code::Pop_rm64, dest_mem).unwrap());
+                        }
+	                    (OpKind::Register, OpKind::Memory) => {
+	                        let dest_reg = instruction.op0_register();
+                        
+	                        let src_mem = get_memory_operand(instruction);
+                        
+	                        result.push(Instruction::with1(Code::Push_r64, Register::R11).unwrap());
+                        
+	                        result.push(Instruction::with2(Code::Lea_r64_m, Register::R11, src_mem).unwrap());
+                        
+	                        let indirect_mem = MemoryOperand::with_base(Register::R11);
+	                        result.push(Instruction::with2(Code::Mov_r64_rm64, dest_reg, indirect_mem).unwrap());
+                        
+	                        result.push(Instruction::with1(Code::Pop_r64, Register::R11).unwrap());
+	                    }
+                        _ => {
+                            result.push(*instruction);
+                        }
+                    }
+                }
+	            Code::Lea_r16_m | Code::Lea_r32_m | Code::Lea_r64_m => {
+                    let dest_reg = instruction.op0_register();
+                    let original_displ = instruction.memory_displacement64();
+                    
+                    let random_offset = 0xEFA7u64;
+                    let obfuscated_displ = original_displ.wrapping_add(random_offset);
+                    
+                    let mem_base = instruction.memory_base();
+                    let mem_index = instruction.memory_index();
+                    let mem_scale = instruction.memory_index_scale();
+                    let mem_seg = instruction.memory_segment();
+                    
+                    let obfuscated_mem = MemoryOperand::new(
+                        mem_base, 
+                        mem_index, 
+                        mem_scale, 
+                        obfuscated_displ as i64, 
+                        8, 
+                        false, 
+                        mem_seg
+                    );
+                    
+                    result.push(Instruction::with(Code::Pushfq));
+                    
+                    result.push(Instruction::with2(Code::Lea_r64_m, dest_reg, obfuscated_mem).unwrap());
+
+                    result.push(Instruction::with2(Code::Xchg_rm64_r64, dest_reg, dest_reg).unwrap());
+                    result.push(Instruction::with2(Code::Xchg_rm64_r64, dest_reg, dest_reg).unwrap());
+
+                    result.push(Instruction::with2(Code::Sub_rm64_imm32, dest_reg, random_offset as u32).unwrap());
+                    
+                    result.push(Instruction::with(Code::Popfq));
+	            }
+                _ => {
+                    result.push(*instruction);
+                }
             }
-            
-            result.push(*instruction);
         }
 
         result
     }
-    
+
     fn enabled_by_default(&self) -> bool {
         true
     }
