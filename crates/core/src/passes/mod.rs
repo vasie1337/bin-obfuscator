@@ -26,10 +26,12 @@ impl PassManager {
         self.passes.push(pass);
     }
     
-    pub fn run_passes(&self, mut instructions: Vec<Instruction>) -> Vec<Instruction> {
-        for pass in &self.passes {
-            debug!("Running pass: {}", pass.name());
-            instructions = pass.apply(&instructions);
+    pub fn run_passes(&self, mut instructions: Vec<Instruction>, count: usize) -> Vec<Instruction> {
+        for _ in 0..count {
+            for pass in &self.passes {
+                debug!("Running pass: {}", pass.name());
+                instructions = pass.apply(&instructions);
+            }
         }
         instructions
     }

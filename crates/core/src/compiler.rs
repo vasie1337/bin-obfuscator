@@ -28,7 +28,7 @@ impl CompilerContext {
         let mut merged_bytes = Vec::new();
 
         for runtime_function in runtime_functions.iter_mut() {
-            let transformed_instructions = self.pass_manager.run_passes(runtime_function.instructions.clone());
+            let transformed_instructions = self.pass_manager.run_passes(runtime_function.instructions.clone(), 2);
             runtime_function.instructions = transformed_instructions;
 
             let function_bytes = runtime_function.encode(current_rva)
