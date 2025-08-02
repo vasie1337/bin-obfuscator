@@ -1,4 +1,5 @@
-use common::debug;
+use common::{info}   ;
+use crate::function::RuntimeFunction;
 use iced_x86::Instruction;
 
 pub mod opaque_branches_pass;
@@ -24,14 +25,13 @@ impl PassManager {
         self.passes.push(pass);
     }
 
-    pub fn run_passes(&self, mut instructions: Vec<Instruction>, count: usize) -> Vec<Instruction> {
+    pub fn run_passes(&self, runtime_function: &mut RuntimeFunction, count: usize) {
         for _ in 0..count {
             for pass in &self.passes {
-                debug!("Running pass: {}", pass.name());
-                instructions = pass.apply(&instructions);
+                info!("Function: {:?}", runtime_function.name);
+                runtime_function.instructions = pass.apply(&runtime_function.instructions);
             }
         }
-        instructions
     }
 
     pub fn default() -> Self {

@@ -33,10 +33,9 @@ impl CompilerContext {
         let mut merged_bytes = Vec::new();
 
         for runtime_function in runtime_functions.iter_mut() {
-            let transformed_instructions = self
+            self
                 .pass_manager
-                .run_passes(runtime_function.instructions.clone(), 3);
-            runtime_function.instructions = transformed_instructions;
+                .run_passes(runtime_function, 1);
 
             let function_bytes = runtime_function.encode(current_rva).map_err(|e| {
                 format!("Failed to encode function {}: {}", runtime_function.name, e)

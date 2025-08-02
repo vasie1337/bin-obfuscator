@@ -33,7 +33,7 @@ impl AnalyzerContext {
         for pdb_function in pdb_functions {
             let function_name = pdb_function.name.clone();
             if function_name != "main" {
-                continue;
+                //continue;
             }
 
             let function_rva = pdb_function.rva;
