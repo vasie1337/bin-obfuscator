@@ -1,6 +1,6 @@
 use super::Pass;
 use crate::function::RuntimeFunction;
-use iced_x86::{Code, Instruction, OpKind};
+use iced_x86::{Code, Instruction, MemoryOperand, OpKind};
 
 pub struct MutationPass {}
 
@@ -10,22 +10,24 @@ impl MutationPass {
     }
 }
 
-//fn get_memory_operand(instruction: &Instruction) -> MemoryOperand {
-//    let mem_base = instruction.memory_base();
-//    let mem_index = instruction.memory_index();
-//    let mem_scale = instruction.memory_index_scale();
-//    let mem_displ = instruction.memory_displacement64();
-//    let mem_seg = instruction.memory_segment();
-//    MemoryOperand::new(
-//        mem_base,
-//        mem_index,
-//        mem_scale,
-//        mem_displ as i64,
-//        8,
-//        false,
-//        mem_seg,
-//    )
-//}
+fn get_memory_operand(instruction: &Instruction) -> MemoryOperand {
+    let mem_base = instruction.memory_base();
+    let mem_index = instruction.memory_index();
+    let mem_scale = instruction.memory_index_scale();
+    let mem_displ = instruction.memory_displacement64();
+    let mem_displ_size = instruction.memory_displ_size();
+    let is_broadcast = instruction.is_broadcast();
+    let mem_seg = instruction.segment_prefix();
+    MemoryOperand::new(
+        mem_base,
+        mem_index,
+        mem_scale,
+        mem_displ as i64,
+        mem_displ_size,
+        is_broadcast,
+        mem_seg,
+    )
+}
 
 impl Pass for MutationPass {
     fn name(&self) -> &'static str {
@@ -44,7 +46,6 @@ impl Pass for MutationPass {
                         (OpKind::Register, OpKind::Register) => {
                             let dest_reg = instruction.op0_register();
                             let src_reg = instruction.op1_register();
-
                             result.push(
                                 Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap(),
                             );
@@ -53,24 +54,45 @@ impl Pass for MutationPass {
                                 Instruction::with2(Code::Adcx_r64_rm64, dest_reg, src_reg).unwrap(),
                             );
                         }
-                        (OpKind::Memory, OpKind::Register) => {
-                            //let src_reg = instruction.op1_register();
-                            //let dest_mem = get_memory_operand(instruction);
-                            //// Zero out the memory location
-                            //result.push(Instruction::with2(Code::Xor_rm64_imm32, dest_mem, 0).unwrap());
-                            //result.push(Instruction::with(Code::Clc));
-                            //result.push(Instruction::with2(Code::Adc_rm64_r64, dest_mem, src_reg).unwrap());
-                            //println!("{}: {:?}", function.name, instruction);
+                        (OpKind::Register, OpKind::Memory) => {
+                            let dest_reg = instruction.op0_register();
+                            let mem_base = instruction.memory_base();
+
+                            if dest_reg == mem_base || dest_reg == instruction.memory_index() {
+                                println!("Skipping mutation - dest reg {:?} used in memory operand: {:?}", dest_reg, instruction);
+                                result.push(*instruction);
+                                continue;
+                            }
+
+                            let src_mem = get_memory_operand(instruction);
+                            
+                            result.push(Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap());
+                            result.push(Instruction::with2(Code::Add_r64_rm64, dest_reg, src_mem).unwrap());            
+                        
+                            println!("{}: {:?}", function.name, instruction);                
                         }
-                        //(OpKind::Register, OpKind::Memory) => {
-                        //    let dest_reg = instruction.op0_register();
-                        //    let src_mem = get_memory_operand(instruction);
-                        //
-                        //    result.push(Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap());
-                        //    result.push(Instruction::with(Code::Clc));
-                        //    result.push(Instruction::with2(Code::Adcx_r64_rm64, dest_reg, src_mem).unwrap());
-                        //}
-                        _ => {
+
+                        (OpKind::Memory, OpKind::Register) => {
+                            let src_reg = instruction.op1_register();
+                            let mem_base = instruction.memory_base();
+                            let mem_index = instruction.memory_index();
+                            
+                            if src_reg == mem_base || src_reg == mem_index {
+                                println!("Skipping mutation - src reg {:?} used in memory operand: {:?}", 
+                                        src_reg, instruction);
+                                result.push(*instruction);
+                                continue;
+                            }
+                            
+                            // Method 1: PUSH/POP pattern (safest)
+                            result.push(Instruction::with1(Code::Push_r64, src_reg).unwrap());
+                            
+                            let mut pop_instr = *instruction;
+                            pop_instr.set_code(Code::Pop_rm64);
+                            result.push(pop_instr);
+                            
+                            println!("{}: {:?}", function.name, instruction);
+                        }                        _ => {
                             result.push(*instruction);
                         }
                     }

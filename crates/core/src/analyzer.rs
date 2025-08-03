@@ -29,7 +29,7 @@ impl AnalyzerContext {
         let runtime_functions: Vec<RuntimeFunction> = pdb_functions
             .iter()
             .filter(|f| f.size > 5)
-            //.filter(|f| f.name == "main")
+            //.filter(|f| f.rva == 0x17A0)
             .filter_map(|pdb_function| {
                 let mut runtime_function = RuntimeFunction::new(pdb_function);
                 match runtime_function.decode(&self.pe_context.borrow()) {
