@@ -1,7 +1,7 @@
 use iced_x86::*;
 use parsers::pdb::PDBFunction;
 use parsers::pe::PEContext;
-
+use std::fmt::{Display, Formatter, Error};
 #[derive(Clone)]
 pub struct OriginalFunctionState {
     pub rva: u32,
@@ -79,20 +79,12 @@ impl RuntimeFunction {
                 )
             })?;
 
-        let estimated_instruction_count = (bytes.len() / 3).max(16);
-        let mut instructions = Vec::with_capacity(estimated_instruction_count);
-
-        let mut decoder =
-            Decoder::with_ip(64, &bytes, self.rva as u64, iced_x86::DecoderOptions::NONE);
+        let mut instructions = Vec::new();
+        let mut decoder = Decoder::with_ip(64, &bytes, self.rva as u64, iced_x86::DecoderOptions::NONE);
 
         while decoder.can_decode() {
             let instruction = decoder.decode();
-
-            match instruction.mnemonic() {
-                _ => {
-                    instructions.push(instruction);
-                }
-            }
+            instructions.push(instruction);
         }
 
         instructions.shrink_to_fit();
@@ -110,5 +102,11 @@ impl RuntimeFunction {
         };
         
         Ok(result.code_buffer)
+    }
+}
+
+impl Display for RuntimeFunction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "name: {}, rva: {:#x}, size: {}, instructions: {}", self.name, self.rva, self.size, self.instructions.len())
     }
 }

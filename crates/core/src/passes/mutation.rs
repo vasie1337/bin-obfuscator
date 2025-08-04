@@ -43,49 +43,64 @@ impl Pass for MutationPass {
                     let op_kinds: Vec<OpKind> = instruction.op_kinds().collect();
 
                     match (op_kinds[0], op_kinds[1]) {
-                        //(OpKind::Register, OpKind::Register) => {
-                        //    let dest_reg = instruction.op0_register();
-                        //    let src_reg = instruction.op1_register();
-                        //    result.push(
-                        //        Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap(),
-                        //    );
-                        //    result.push(Instruction::with(Code::Clc));
-                        //    result.push(
-                        //        Instruction::with2(Code::Adcx_r64_rm64, dest_reg, src_reg).unwrap(),
-                        //    );
-                        //}
-                        //(OpKind::Register, OpKind::Memory) => {
-                        //    let dest_reg = instruction.op0_register();
-                        //    let mem_base = instruction.memory_base();
-//
-                        //    if dest_reg == mem_base || dest_reg == instruction.memory_index() {
-                        //        result.push(*instruction);
-                        //        continue;
-                        //    }
-//
-                        //    let src_mem = get_memory_operand(instruction);
-                        //    
-                        //    result.push(Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap());
-                        //    result.push(Instruction::with2(Code::Add_r64_rm64, dest_reg, src_mem).unwrap());           
-                        //}
-//
-                        //(OpKind::Memory, OpKind::Register) => {
-                        //    let src_reg = instruction.op1_register();
-                        //    let mem_base = instruction.memory_base();
-                        //    let mem_index = instruction.memory_index();
-                        //    
-                        //    if src_reg == mem_base || src_reg == mem_index {
-                        //        result.push(*instruction);
-                        //        continue;
-                        //    }
-                        //    
-                        //    // Method 1: PUSH/POP pattern (safest)
-                        //    result.push(Instruction::with1(Code::Push_r64, src_reg).unwrap());
-                        //    
-                        //    let mut pop_instr = *instruction;
-                        //    pop_instr.set_code(Code::Pop_rm64);
-                        //    result.push(pop_instr);
-                        //}                        
+                        (OpKind::Register, OpKind::Register) => {
+                            let dest_reg = instruction.op0_register();
+                            let src_reg = instruction.op1_register();
+
+                            let mut xor_instr = Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap();
+                            xor_instr.set_ip(instruction.ip());
+                            result.push(xor_instr);
+
+                            let mut clc_instr = Instruction::with(Code::Clc);
+                            clc_instr.set_ip(instruction.ip() + 1);
+                            result.push(clc_instr);
+
+                            let mut adcx_instr = Instruction::with2(Code::Adcx_r64_rm64, dest_reg, src_reg).unwrap();
+                            adcx_instr.set_ip(instruction.ip() + 2);
+                            result.push(adcx_instr);
+                        }
+                        (OpKind::Register, OpKind::Memory) => {
+                            let dest_reg = instruction.op0_register();
+                            let mem_base = instruction.memory_base();
+                            
+                            if dest_reg == mem_base || dest_reg == instruction.memory_index() {
+                                result.push(*instruction);
+                                continue;
+                            }
+                            
+                            let src_mem = get_memory_operand(instruction);
+
+                            let mut xor_instr = Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap();
+                            xor_instr.set_ip(instruction.ip());
+                            result.push(xor_instr);
+
+                            let mut clc_instr = Instruction::with(Code::Clc);
+                            clc_instr.set_ip(instruction.ip() + 1);
+                            result.push(clc_instr);
+
+                            let mut adcx_instr = Instruction::with2(Code::Adcx_r64_rm64, dest_reg, src_mem).unwrap();
+                            adcx_instr.set_ip(instruction.ip() + 2);
+                            result.push(adcx_instr);
+                        }
+                        (OpKind::Memory, OpKind::Register) => {
+                            let src_reg = instruction.op1_register();
+                            let mem_base = instruction.memory_base();
+                            let mem_index = instruction.memory_index();
+                            
+                            if src_reg == mem_base || src_reg == mem_index {
+                                result.push(*instruction);
+                                continue;
+                            }
+                            
+                            let mut push_instr = Instruction::with1(Code::Push_r64, src_reg).unwrap();
+                            push_instr.set_ip(instruction.ip());
+                            result.push(push_instr);
+
+                            let mut pop_instr = *instruction;
+                            pop_instr.set_code(Code::Pop_rm64);
+                            pop_instr.set_ip(instruction.ip() + 1);
+                            result.push(pop_instr);
+                        }                        
                         _ => {
                             result.push(*instruction);
                         }

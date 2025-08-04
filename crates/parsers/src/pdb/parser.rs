@@ -19,20 +19,9 @@ impl PDBContext {
         }
     }
 
-    
 	fn parse(&self) -> Result<Vec<PDBFunction>, String> {
 	    let pdb_object = PdbObject::parse(&self.pdb_data).map_err(|e| e.to_string())?;
 	    let mut functions = Vec::new();
-	    
-	    for sym in pdb_object.symbol_map().iter() {
-	        if let Some(name) = sym.name() {
-	            functions.push(PDBFunction {
-	                name: self.demangle_name(name),
-	                rva: sym.address as u32,
-	                size: sym.size as u32,
-	            });
-	        }
-	    }
 	    
 	    if let Ok(session) = pdb_object.debug_session() {
 	        for func_result in session.functions() {
@@ -45,6 +34,10 @@ impl PDBContext {
 	            }
 	        }
 	    }
+	    
+	    functions.sort_by_key(|f: &PDBFunction| f.rva);
+	    
+	    functions.dedup_by(|a, b| a.rva == b.rva);
 	    
 	    Ok(functions)
 	}
