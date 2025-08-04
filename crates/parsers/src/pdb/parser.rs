@@ -24,7 +24,6 @@ impl PDBContext {
 	    let pdb_object = PdbObject::parse(&self.pdb_data).map_err(|e| e.to_string())?;
 	    let mut functions = Vec::new();
 	    
-	    // 1. Get symbols from the regular symbol map
 	    for sym in pdb_object.symbol_map().iter() {
 	        if let Some(name) = sym.name() {
 	            functions.push(PDBFunction {
@@ -35,7 +34,6 @@ impl PDBContext {
 	        }
 	    }
 	    
-	    // 2. Try to access public symbols table which often contains CRT functions
 	    if let Ok(session) = pdb_object.debug_session() {
 	        for func_result in session.functions() {
 	            if let Ok(func) = func_result {
@@ -46,16 +44,6 @@ impl PDBContext {
 	                });
 	            }
 	        }
-	    }
-	    
-	    // Sort functions by address for consistent output
-	    functions.sort_by_key(|f| f.rva);
-	    
-	    // Remove duplicates (same function might appear in multiple tables)
-	    functions.dedup_by(|a, b| a.rva == b.rva && a.name == b.name);
-	    
-	    for func in functions.iter() {
-	        println!("PDB Function: {:#x} {} {}", func.rva, func.name, func.size);
 	    }
 	    
 	    Ok(functions)
