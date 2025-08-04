@@ -1,6 +1,7 @@
-use iced_x86::{BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock, Mnemonic};
+use iced_x86::*;
+use parsers::pdb::PDBFunction;
 use parsers::pe::PEContext;
-
+use std::fmt::{Display, Formatter, Error};
 #[derive(Clone)]
 pub struct OriginalFunctionState {
     pub rva: u32,
@@ -17,11 +18,11 @@ pub struct RuntimeFunction {
 }
 
 impl RuntimeFunction {
-    pub fn new(name: String, rva: u32, size: u32) -> Self {
+    pub fn new(pdb_function: &PDBFunction) -> Self {
         Self {
-            name,
-            rva,
-            size,
+            name: pdb_function.name.clone(),
+            rva: pdb_function.rva,
+            size: pdb_function.size,
             instructions: vec![],
             original: None,
         }
@@ -48,15 +49,24 @@ impl RuntimeFunction {
     }
 
     pub fn get_original_rva(&self) -> u32 {
-        self.original.as_ref().map(|orig| orig.rva).unwrap_or(self.rva)
+        self.original
+            .as_ref()
+            .map(|orig| orig.rva)
+            .unwrap_or(self.rva)
     }
 
     pub fn get_original_size(&self) -> u32 {
-        self.original.as_ref().map(|orig| orig.size).unwrap_or(self.size)
+        self.original
+            .as_ref()
+            .map(|orig| orig.size)
+            .unwrap_or(self.size)
     }
 
     pub fn get_original_instructions(&self) -> &Vec<Instruction> {
-        self.original.as_ref().map(|orig| &orig.instructions).unwrap_or(&self.instructions)
+        self.original
+            .as_ref()
+            .map(|orig| &orig.instructions)
+            .unwrap_or(&self.instructions)
     }
 
     pub fn decode(&mut self, pe_context: &PEContext) -> Result<(), String> {
@@ -69,28 +79,12 @@ impl RuntimeFunction {
                 )
             })?;
 
-        let estimated_instruction_count = (bytes.len() / 3).max(16);
-        let mut instructions = Vec::with_capacity(estimated_instruction_count);
-
-        let mut decoder = Decoder::with_ip(
-            64,
-            &bytes,
-            self.rva as u64,
-            iced_x86::DecoderOptions::NONE,
-        );
+        let mut instructions = Vec::new();
+        let mut decoder = Decoder::with_ip(64, &bytes, self.rva as u64, iced_x86::DecoderOptions::NONE);
 
         while decoder.can_decode() {
             let instruction = decoder.decode();
-
-            match instruction.mnemonic() {
-                Mnemonic::Ret => {
-                    instructions.push(instruction);
-                    break;
-                }
-                _ => {
-                    instructions.push(instruction);
-                }
-            }
+            instructions.push(instruction);
         }
 
         instructions.shrink_to_fit();
@@ -102,10 +96,17 @@ impl RuntimeFunction {
 
     pub fn encode(&self, rva: u64) -> Result<Vec<u8>, String> {
         let block = InstructionBlock::new(&self.instructions, rva);
-        let bytes = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
-            Ok(bytes) => bytes.code_buffer,
+        let result = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
+            Ok(result) => result,
             Err(e) => return Err(e.to_string()),
         };
-        Ok(bytes)
+        
+        Ok(result.code_buffer)
+    }
+}
+
+impl Display for RuntimeFunction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "name: {}, rva: {:#x}, size: {}, instructions: {}", self.name, self.rva, self.size, self.instructions.len())
     }
 }

@@ -15,29 +15,32 @@ impl PDBContext {
     pub fn get_functions(&self) -> Result<Vec<PDBFunction>, String> {
         match self.parse() {
             Ok(functions) => Ok(functions),
-            Err(e) => {
-                Err(e.to_string())
-            }
+            Err(e) => Err(e.to_string()),
         }
     }
 
-    fn parse(&self) -> Result<Vec<PDBFunction>, String> {
-        let pdb_object = PdbObject::parse(&self.pdb_data).map_err(|e| e.to_string())?;
-        let symbol_map = pdb_object.symbol_map();
-
-        let functions: Vec<PDBFunction> = symbol_map
-            .iter()
-            .filter_map(|sym| {
-                sym.name().map(|name| PDBFunction {
-                    name: self.demangle_name(name),
-                    rva: sym.address as u32,
-                    size: sym.size as u32,
-                })
-            })
-            .collect();
-
-        Ok(functions)
-    }
+	fn parse(&self) -> Result<Vec<PDBFunction>, String> {
+	    let pdb_object = PdbObject::parse(&self.pdb_data).map_err(|e| e.to_string())?;
+	    let mut functions = Vec::new();
+	    
+	    if let Ok(session) = pdb_object.debug_session() {
+	        for func_result in session.functions() {
+	            if let Ok(func) = func_result {
+	                functions.push(PDBFunction {
+	                    name: self.demangle_name(&func.name.to_string()),
+	                    rva: func.address as u32,
+	                    size: func.size as u32,
+	                });
+	            }
+	        }
+	    }
+	    
+	    functions.sort_by_key(|f: &PDBFunction| f.rva);
+	    
+	    functions.dedup_by(|a, b| a.rva == b.rva);
+	    
+	    Ok(functions)
+	}
 
     fn demangle_name(&self, name: &str) -> String {
         let name = Name::from(name);

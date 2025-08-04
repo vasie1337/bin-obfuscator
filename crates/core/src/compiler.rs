@@ -1,44 +1,48 @@
-use parsers::pe::PEContext;
 use crate::function::RuntimeFunction;
 use common::{debug, info};
+use parsers::pe::PEContext;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct CompilerContext {
-    pub pe_context: PEContext,
+    pub pe_context: Rc<RefCell<PEContext>>,
 }
 
 impl CompilerContext {
-    pub fn new(pe_context: PEContext) -> Self {
-        Self { 
-            pe_context,
-        }
+    pub fn new(pe_context: Rc<RefCell<PEContext>>) -> Self {
+        Self { pe_context }
     }
 
-    pub fn compile_functions(&mut self, runtime_functions: &mut Vec<RuntimeFunction>) -> Result<Vec<u8>, String> {
-        for runtime_function in runtime_functions.iter_mut() {
-            runtime_function.capture_original_state();
-        }
-
-        let section_base_rva = self.pe_context.get_next_section_rva()
+    pub fn compile_functions(
+        &mut self,
+        runtime_functions: &mut Vec<RuntimeFunction>,
+    ) -> Result<Vec<u8>, String> {
+        let section_base_rva = self
+            .pe_context
+            .borrow()
+            .get_next_section_rva()
             .map_err(|e| format!("Failed to get next section RVA: {}", e))?;
 
         let mut current_rva = section_base_rva;
         let mut merged_bytes = Vec::new();
 
         for runtime_function in runtime_functions.iter_mut() {
-            //let transformed_instructions = self.pass_manager.run_passes(runtime_function.instructions.clone());
-            //runtime_function.instructions = runtime_function.instructions.clone();
+            let function_bytes = runtime_function.encode(current_rva).map_err(|e| {
+                format!("Failed to encode function {}: {}", runtime_function.name, e)
+            })?;
 
-            let function_bytes = runtime_function.encode(current_rva)
-                .map_err(|e| format!("Failed to encode function {}: {}", runtime_function.name, e))?;
-            
             merged_bytes.extend_from_slice(&function_bytes);
 
             runtime_function.update_rva(current_rva as u32);
             runtime_function.update_size(function_bytes.len() as u32);
 
-            debug!("Encoded function {} with {} bytes at RVA {:#x}", 
-                  runtime_function.name, function_bytes.len(), current_rva);
-            
+            debug!(
+                "Encoded function {} with {} bytes at RVA {:#x}",
+                runtime_function.name,
+                function_bytes.len(),
+                current_rva
+            );
+
             if let Some(original) = runtime_function.get_original() {
                 debug!(
                     "Function {} transformation: original RVA {:#x} -> new RVA {:#x}, original size {} -> new size {}, instructions {} -> {}",
@@ -55,17 +59,23 @@ impl CompilerContext {
             current_rva += function_bytes.len() as u64;
         }
 
+        self.zero_old_function_bytes(runtime_functions)?;
         self.patch_function_redirects(runtime_functions)?;
 
-        self.pe_context.create_executable_section(".vasie", &merged_bytes)
+        self.pe_context
+            .borrow_mut()
+            .create_executable_section(".vasie", &merged_bytes)
             .map_err(|e| format!("Failed to create executable section: {}", e))?;
-        
+
         info!("Created .vasie section with {} bytes", merged_bytes.len());
 
         Ok(merged_bytes)
     }
 
-    fn patch_function_redirects(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
+    fn patch_function_redirects(
+        &mut self,
+        runtime_functions: &[RuntimeFunction],
+    ) -> Result<(), String> {
         for runtime_function in runtime_functions {
             let src_rva = runtime_function.get_original_rva();
             let dst_rva = runtime_function.rva;
@@ -77,12 +87,14 @@ impl CompilerContext {
             jmp_bytes[0] = 0xE9;
             jmp_bytes[1..].copy_from_slice(&rel32.to_le_bytes());
 
-            self.pe_context.write_data_at_rva(src_rva, &jmp_bytes)
+            self.pe_context
+                .borrow_mut()
+                .write_data_at_rva(src_rva, &jmp_bytes)
                 .map_err(|e| format!("Failed to patch JMP at {:#x}: {}", src_rva, e))?;
 
-                debug!(
-                "Patched JMP at 0x{:x} to 0x{:x} (rel_offset: 0x{:x})",
-                src_rva, dst_rva, rel32
+            debug!(
+                "Patched JMP at 0x{:x} to 0x{:x} (rel_offset: 0x{:x}) for function {}",
+                src_rva, dst_rva, rel32, runtime_function.name
             );
         }
 
@@ -91,7 +103,34 @@ impl CompilerContext {
         Ok(())
     }
 
+    fn zero_old_function_bytes(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
+        for runtime_function in runtime_functions {
+            let original_rva = runtime_function.get_original_rva();
+            let original_size = runtime_function.get_original_size();
+            
+            if original_size > 5 {
+                let remaining_bytes = original_size - 5;
+                let interrupt_bytes = vec![0xCC; remaining_bytes as usize];
+                
+                let start_rva = original_rva + 5;
+                
+                self.pe_context
+                    .borrow_mut()
+                    .write_data_at_rva(start_rva, &interrupt_bytes)
+                    .map_err(|e| format!("Failed to write interrupt bytes at {:#x}: {}", start_rva, e))?;
+            } else {
+                debug!(
+                    "Skipping function {} - original instruction length {} is too small for interrupt filling",
+                    runtime_function.name, original_size
+                );
+            }
+        }
+        
+        info!("Filled old function bytes with interrupt instructions for {} functions", runtime_functions.len());
+        Ok(())
+    }
+
     pub fn get_binary_data(self) -> Vec<u8> {
-        self.pe_context.pe_data
+        self.pe_context.borrow().pe_data.clone()
     }
 }
