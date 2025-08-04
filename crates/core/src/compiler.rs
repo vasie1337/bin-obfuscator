@@ -69,6 +69,11 @@ impl CompilerContext {
 
         info!("Created .vasie section with {} bytes", merged_bytes.len());
 
+        self.pe_context
+            .borrow_mut()
+            .set_pdb_string("C:\\Users\\vasie\\Desktop\\test.pdb")
+            .map_err(|e| format!("Failed to set PDB string: {}", e))?;
+
         Ok(merged_bytes)
     }
 
