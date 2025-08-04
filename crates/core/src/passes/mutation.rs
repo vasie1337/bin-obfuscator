@@ -1,6 +1,6 @@
 use super::Pass;
 use crate::function::RuntimeFunction;
-use iced_x86::{Code, Instruction, MemoryOperand, OpKind};
+use iced_x86::{Code, Instruction, MemoryOperand, OpKind, Register};
 
 pub struct MutationPass {}
 
@@ -37,7 +37,7 @@ impl Pass for MutationPass {
     fn apply(&self, function: &mut RuntimeFunction) -> Result<(), String> {
         let mut result = Vec::with_capacity(function.instructions.len() * 3);
 
-        for instruction in function.instructions.iter() {
+        for instruction in function.instructions.iter_mut() {
             match instruction.code() {
                 Code::Mov_r64_rm64 | Code::Mov_rm64_r64 => {
                     let op_kinds: Vec<OpKind> = instruction.op_kinds().collect();
@@ -106,7 +106,33 @@ impl Pass for MutationPass {
                         }
                     }
                 }
+                Code::Lea_r64_m => {
+                    if instruction.memory_displ_size() != 0 {
+                        let dest_reg = instruction.op0_register();                        
+                        const RANDOM_VALUE: u32 = 0x1337;
+
+                        let displacement = instruction.memory_displacement64();
+                        instruction.set_memory_displacement64(displacement + RANDOM_VALUE as u64);
+                        result.push(*instruction);
+
+                        let mut pushf_instr = Instruction::with(Code::Pushfq);
+                        pushf_instr.set_ip(instruction.ip() + 1);
+                        result.push(pushf_instr);
+
+                        let mut sub_instr = Instruction::with2(Code::Sub_rm64_imm32, dest_reg, RANDOM_VALUE).unwrap();
+                        sub_instr.set_ip(instruction.ip() + 2);
+                        result.push(sub_instr);
+
+                        let mut popfq_instr = Instruction::with(Code::Popfq);
+                        popfq_instr.set_ip(instruction.ip() + 3);
+                        result.push(popfq_instr);
+                    } else {
+                        result.push(*instruction);
+                    }
+                    
+                }
                 _ => {
+                    //println!("Skipping instruction: {:?}", instruction);
                     result.push(*instruction);
                 }
             }
