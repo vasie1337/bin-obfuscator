@@ -1,6 +1,4 @@
-use iced_x86::{
-    BlockEncoder, BlockEncoderOptions, Decoder, Instruction, InstructionBlock, Mnemonic,
-};
+use iced_x86::*;
 use parsers::pdb::PDBFunction;
 use parsers::pe::PEContext;
 
@@ -71,6 +69,21 @@ impl RuntimeFunction {
             .unwrap_or(&self.instructions)
     }
 
+    // Update branch targets repsective to the new section base
+    // we need to do this before shuffeling instructions around internally in the function
+    // otherwise the auto bracnh fixing from iced_x86 will not work
+    // for every relative instruction, not only jumps we need to update it if the address is in this function
+    // this is to support indirect jumps and direct jumps
+    pub fn fix_branches(&mut self, new_section_base: u32) {
+        for instruction in self.instructions.iter_mut() {
+            if instruction.is_ip_rel_memory_operand() {
+                // FOr now only log this so we now what we need to fix
+                println!("Found relative instruction: {:?}", instruction);
+                // TODO: Fix this
+            }
+        }
+    }
+
     pub fn decode(&mut self, pe_context: &PEContext) -> Result<(), String> {
         let bytes = pe_context
             .read_data_at_rva(self.rva, self.size as usize)
@@ -110,10 +123,19 @@ impl RuntimeFunction {
 
     pub fn encode(&self, rva: u64) -> Result<Vec<u8>, String> {
         let block = InstructionBlock::new(&self.instructions, rva);
-        let bytes = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
-            Ok(bytes) => bytes.code_buffer,
+        let result = match BlockEncoder::encode(64, block, BlockEncoderOptions::RETURN_RELOC_INFOS) {
+            Ok(result) => result,
             Err(e) => return Err(e.to_string()),
         };
-        Ok(bytes)
+        
+        // Debug: Print relocation information to understand what's being fixed
+        if !result.reloc_infos.is_empty() {
+            println!("Function at RVA {:#x} has {} relocations:", rva, result.reloc_infos.len());
+            for reloc in &result.reloc_infos {
+                println!("  Reloc at offset {:#x}, kind: {:?}", reloc.address, reloc.kind);
+            }
+        }
+        
+        Ok(result.code_buffer)
     }
 }

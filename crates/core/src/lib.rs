@@ -42,6 +42,9 @@ pub fn run(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     let mut runtime_functions = analyze_binary(&core_context)?;
     info!("Analyzed {} functions", runtime_functions.len());
 
+    fix_branches(&mut runtime_functions)?;
+    info!("Fixed branches in {} functions", runtime_functions.len());
+
     obfuscate_binary(&mut runtime_functions)?;
     info!("Obfuscated {} functions", runtime_functions.len());
 
@@ -78,6 +81,13 @@ fn analyze_binary(core_context: &CoreContext) -> Result<Vec<RuntimeFunction>, St
     let analyzer_context = AnalyzerContext::new(core_context);
     let runtime_functions = analyzer_context.analyze()?;
     Ok(runtime_functions)
+}
+
+fn fix_branches(functions: &mut Vec<RuntimeFunction>) -> Result<(), String> {
+    for function in functions.iter_mut() {
+        function.fix_branches(function.rva);
+    }
+    Ok(())
 }
 
 fn obfuscate_binary(functions: &mut Vec<RuntimeFunction>) -> Result<(), String> {    
