@@ -19,23 +19,47 @@ impl PDBContext {
         }
     }
 
-    fn parse(&self) -> Result<Vec<PDBFunction>, String> {
-        let pdb_object = PdbObject::parse(&self.pdb_data).map_err(|e| e.to_string())?;
-        let symbol_map = pdb_object.symbol_map();
-
-        let functions: Vec<PDBFunction> = symbol_map
-            .iter()
-            .filter_map(|sym| {
-                sym.name().map(|name| PDBFunction {
-                    name: self.demangle_name(name),
-                    rva: sym.address as u32,
-                    size: sym.size as u32,
-                })
-            })
-            .collect();
-
-        Ok(functions)
-    }
+    
+	fn parse(&self) -> Result<Vec<PDBFunction>, String> {
+	    let pdb_object = PdbObject::parse(&self.pdb_data).map_err(|e| e.to_string())?;
+	    let mut functions = Vec::new();
+	    
+	    // 1. Get symbols from the regular symbol map
+	    for sym in pdb_object.symbol_map().iter() {
+	        if let Some(name) = sym.name() {
+	            functions.push(PDBFunction {
+	                name: self.demangle_name(name),
+	                rva: sym.address as u32,
+	                size: sym.size as u32,
+	            });
+	        }
+	    }
+	    
+	    // 2. Try to access public symbols table which often contains CRT functions
+	    if let Ok(session) = pdb_object.debug_session() {
+	        for func_result in session.functions() {
+	            if let Ok(func) = func_result {
+	                functions.push(PDBFunction {
+	                    name: self.demangle_name(&func.name.to_string()),
+	                    rva: func.address as u32,
+	                    size: func.size as u32,
+	                });
+	            }
+	        }
+	    }
+	    
+	    // Sort functions by address for consistent output
+	    functions.sort_by_key(|f| f.rva);
+	    
+	    // Remove duplicates (same function might appear in multiple tables)
+	    functions.dedup_by(|a, b| a.rva == b.rva && a.name == b.name);
+	    
+	    for func in functions.iter() {
+	        println!("PDB Function: {:#x} {} {}", func.rva, func.name, func.size);
+	    }
+	    
+	    Ok(functions)
+	}
 
     fn demangle_name(&self, name: &str) -> String {
         let name = Name::from(name);

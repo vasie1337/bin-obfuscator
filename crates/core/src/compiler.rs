@@ -59,6 +59,7 @@ impl CompilerContext {
             current_rva += function_bytes.len() as u64;
         }
 
+        self.zero_old_function_bytes(runtime_functions)?;
         self.patch_function_redirects(runtime_functions)?;
 
         self.pe_context
@@ -92,13 +93,48 @@ impl CompilerContext {
                 .map_err(|e| format!("Failed to patch JMP at {:#x}: {}", src_rva, e))?;
 
             debug!(
-                "Patched JMP at 0x{:x} to 0x{:x} (rel_offset: 0x{:x})",
-                src_rva, dst_rva, rel32
+                "Patched JMP at 0x{:x} to 0x{:x} (rel_offset: 0x{:x}) for function {}",
+                src_rva, dst_rva, rel32, runtime_function.name
             );
         }
 
         info!("Patched {} JMP instructions", runtime_functions.len());
 
+        Ok(())
+    }
+
+    // this will place interupt instructions in the old function bytes from the end of the jmp instruction to the end of the original function
+    fn zero_old_function_bytes(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
+        for runtime_function in runtime_functions {
+            let original_rva = runtime_function.get_original_rva();
+            let original_size = runtime_function.get_original_size();
+            
+            // Only fill bytes that were actually part of the original instructions, not the full allocated size
+            // Skip the first 5 bytes (JMP instruction) and fill the rest of the actual instruction bytes
+            if original_size > 5 {
+                let remaining_bytes = original_size - 5;
+                let interrupt_bytes = vec![0xCC; remaining_bytes as usize]; // 0xCC is the interrupt instruction
+                
+                let start_rva = original_rva + 5; // Start after the JMP instruction
+                
+                self.pe_context
+                    .borrow_mut()
+                    .write_data_at_rva(start_rva, &interrupt_bytes)
+                    .map_err(|e| format!("Failed to write interrupt bytes at {:#x}: {}", start_rva, e))?;
+                
+                info!(
+                    "Filled {} bytes with interrupts starting at RVA {:#x} for function {} (instruction length: {}, allocated size: {})",
+                    remaining_bytes, start_rva, runtime_function.name, original_size, runtime_function.get_original_size()
+                );
+            } else {
+                debug!(
+                    "Skipping function {} - original instruction length {} is too small for interrupt filling",
+                    runtime_function.name, original_size
+                );
+            }
+        }
+        
+        info!("Filled old function bytes with interrupt instructions for {} functions", runtime_functions.len());
         Ok(())
     }
 

@@ -92,7 +92,8 @@ impl Pass for MutationPass {
                             result.push(pop_instr);
                             
                             println!("{}: {:?}", function.name, instruction);
-                        }                        _ => {
+                        }                        
+                        _ => {
                             result.push(*instruction);
                         }
                     }

@@ -26,7 +26,7 @@ impl Obfuscator {
         for runtime_function in runtime_functions.iter_mut() {
             runtime_function.capture_original_state();
 
-            //self.pass_manager.run_passes(runtime_function, 1);
+            self.pass_manager.run_passes(runtime_function, 1);
         }
 
         info!(
