@@ -1,6 +1,6 @@
 use super::Pass;
 use crate::function::RuntimeFunction;
-use iced_x86::{Code, Instruction, MemoryOperand, OpKind, Register};
+use iced_x86::{Code, Instruction, MemoryOperand, OpKind};
 
 pub struct MutationPass {}
 

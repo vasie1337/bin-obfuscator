@@ -137,15 +137,4 @@ impl PEContext {
         let file_offset = self.rva_to_file_offset(rva)?;
         self.write_data(file_offset, data)
     }
-
-    pub fn set_pdb_string(&mut self, pdb_string: &str) -> Result<(), String> {
-        let pe = self.parse()?;
-        let pdb_string = pdb_string.to_string();
-        let debug_data = pe.debug_data.expect("Debug data not found");
-        let codeview_pdb70_debug_info = debug_data.codeview_pdb70_debug_info.expect("CodeView PDB 7.0 debug info not found");
-        let codeview_pdb70_debug_info_string = codeview_pdb70_debug_info.filename;
-        let string = String::from_utf8(codeview_pdb70_debug_info_string.to_vec()).expect("Invalid UTF-8");
-        println!("codeview_pdb70_debug_info_string: {:?}", string);
-        Ok(())
-    }
 }
