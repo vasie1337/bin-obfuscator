@@ -97,6 +97,33 @@ impl CompilerContext {
         Ok(merged_bytes)
     }
 
+    fn zero_old_function_bytes(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
+        debug!("Zeroing old function bytes for {} functions", runtime_functions.len());
+        
+        for runtime_function in runtime_functions {
+            let original_rva = runtime_function.get_original_rva();
+            let original_size = runtime_function.get_original_size();
+            
+            if original_size > 5 {
+                let remaining_bytes = original_size - 5;
+                let interrupt_bytes = vec![0xCC; remaining_bytes as usize];
+                
+                let start_rva = original_rva + 5;
+                
+                self.pe_context
+                    .borrow_mut()
+                    .write_data_at_rva(start_rva, &interrupt_bytes)
+                    .map_err(|e| format!("Failed to write interrupt bytes at {:#x}: {}", start_rva, e))?;
+            } else {
+                debug!(
+                    "Skipping function {} - original instruction length {} is too small for interrupt filling",
+                    runtime_function.name, original_size
+                );
+            }
+        }
+        Ok(())
+    }
+
     fn patch_function_redirects(
         &mut self,
         runtime_functions: &[RuntimeFunction],
@@ -127,29 +154,17 @@ impl CompilerContext {
         Ok(())
     }
 
-    fn zero_old_function_bytes(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
-        debug!("Zeroing old function bytes for {} functions", runtime_functions.len());
+    fn update_exception_data(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
+        debug!("Updating exception data for {} functions", runtime_functions.len());
         
         for runtime_function in runtime_functions {
             let original_rva = runtime_function.get_original_rva();
-            let original_size = runtime_function.get_original_size();
-            
-            if original_size > 5 {
-                let remaining_bytes = original_size - 5;
-                let interrupt_bytes = vec![0xCC; remaining_bytes as usize];
-                
-                let start_rva = original_rva + 5;
-                
-                self.pe_context
-                    .borrow_mut()
-                    .write_data_at_rva(start_rva, &interrupt_bytes)
-                    .map_err(|e| format!("Failed to write interrupt bytes at {:#x}: {}", start_rva, e))?;
-            } else {
-                debug!(
-                    "Skipping function {} - original instruction length {} is too small for interrupt filling",
-                    runtime_function.name, original_size
-                );
-            }
+            let new_rva = runtime_function.rva;
+            let new_size = runtime_function.size;
+    
+            self.pe_context
+                .borrow_mut()
+                .update_exception_data_from_runtime_functions(&runtime_functions)?;
         }
         Ok(())
     }
