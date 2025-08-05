@@ -101,9 +101,6 @@ impl CompilerContext {
         self.zero_old_function_bytes(obfuscator_functions)?;
         self.patch_function_redirects(obfuscator_functions)?;
 
-        info!("Updating exception data");
-        self.update_exception_data(obfuscator_functions)?;
-
         let (section_rva, section_size) = self
             .pe_context
             .borrow_mut()
@@ -185,24 +182,6 @@ impl CompilerContext {
                 src_rva, dst_rva, rel32, obfuscator_function.name
             );
         }
-        Ok(())
-    }
-
-    fn update_exception_data(
-        &mut self,
-        obfuscator_functions: &[ObfuscatorFunction],
-    ) -> Result<(), String> {
-        debug!(
-            "Updating exception data for {} functions",
-            obfuscator_functions.len()
-        );
-        let functions_with_unwind_data = obfuscator_functions
-            .iter()
-            .filter(|f| f.unwind_info_address.is_some())
-            .collect::<Vec<_>>();
-        self.pe_context
-            .borrow_mut()
-            .update_exception_data(&functions_with_unwind_data)?;
         Ok(())
     }
 

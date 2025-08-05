@@ -21,96 +21,69 @@ impl AnalyzerContext {
     pub fn analyze(&self) -> Result<Vec<ObfuscatorFunction>, String> {
         debug!("Starting function analysis from PDB context");
 
-        let pdb_functions = match self.pdb_context.borrow().get_functions() {
-            Ok(functions) => {
-                info!("Retrieved {} functions from PDB", functions.len());
-                functions
-            }
-            Err(e) => {
+        let pdb_functions = self.pdb_context.borrow().get_functions()
+            .map_err(|e| {
                 error!("Failed to retrieve functions from PDB: {}", e);
-                return Err(e.to_string());
-            }
-        };
+                e.to_string()
+            })?;
 
-        debug!("Filtering functions by size (> 5 bytes)");
-        let filtered_functions: Vec<_> = pdb_functions.iter().filter(|f| f.size > 5).collect();
+        let total_functions = pdb_functions.len();
+        let size_filtered_functions: Vec<_> = pdb_functions.iter().filter(|f| f.size > 5).collect();
+        let filtered_out_count = total_functions - size_filtered_functions.len();
 
-        info!(
-            "Filtered to {} functions after size filtering",
-            filtered_functions.len()
-        );
+        info!("Retrieved {} functions from PDB, filtered out {} due to size (≤5 bytes)", 
+              total_functions, filtered_out_count);
 
-        if filtered_functions.is_empty() {
-            warn!("No functions found after filtering");
-            return Err("No functions to analyze".to_string());
-        }
-
-        debug!("Starting function decoding process");
         let mut successful_decodes = 0;
         let mut failed_decodes = 0;
 
-        let mut obfuscator_functions: Vec<ObfuscatorFunction> = filtered_functions
+        let mut obfuscator_functions: Vec<ObfuscatorFunction> = size_filtered_functions
             .iter()
             .filter_map(|pdb_function| {
                 let mut obfuscator_function = ObfuscatorFunction::new(pdb_function);
                 match obfuscator_function.decode(&self.pe_context.borrow()) {
                     Ok(_) => {
                         successful_decodes += 1;
-                        debug!(
-                            "Successfully decoded function {} at RVA {:#x} with {} instructions",
-                            pdb_function.name,
-                            pdb_function.rva,
-                            obfuscator_function.instructions.len()
-                        );
+                        debug!("Successfully decoded function {} at RVA {:#x}", 
+                               pdb_function.name, pdb_function.rva);
                         Some(obfuscator_function)
                     }
                     Err(e) => {
                         failed_decodes += 1;
-                        error!(
-                            "Failed to analyze function {:#x} {}: {}",
-                            pdb_function.rva, pdb_function.name, e
-                        );
+                        error!("Failed to analyze function {:#x} {}: {}", 
+                               pdb_function.rva, pdb_function.name, e);
                         None
                     }
                 }
             })
             .collect();
 
-        info!(
-            "Function decoding completed: {} successful, {} failed",
-            successful_decodes, failed_decodes
-        );
+        info!("Function decoding: {} successful, {} failed", successful_decodes, failed_decodes);
 
-        if obfuscator_functions.len() == 0 {
+        if obfuscator_functions.is_empty() {
             warn!("No functions remained after decoding");
             return Err("No functions to analyze".to_string());
         }
 
-        debug!(
-            "Capturing original state for {} functions",
-            obfuscator_functions.len()
-        );
-        obfuscator_functions
-            .iter_mut()
-            .for_each(|f| f.capture_original_state());
+        obfuscator_functions.iter_mut().for_each(|f| f.capture_original_state());
 
-        let pe_context_borrow = self.pe_context.borrow();
-        let exception_functions = pe_context_borrow.get_exception_functions()?;
+        let exception_functions = self.pe_context.borrow().get_exception_functions()?;
+        let before_unwind_filter = obfuscator_functions.len();
+        
+        // Remove functions that have unwind info
+        obfuscator_functions.retain(|f| {
+            !exception_functions.iter().any(|ef| ef.begin_address == f.rva)
+        });
+        
+        let unwind_filtered_count = before_unwind_filter - obfuscator_functions.len();
 
-        for obfuscator_function in &mut obfuscator_functions {
-            let function = exception_functions
-                .iter()
-                .find(|f| f.begin_address == obfuscator_function.rva);
-            if let Some(func) = function {
-                obfuscator_function.unwind_info_address = Some(func.unwind_info_address);
-                debug!("Found unwind function for {}", obfuscator_function.name);
-            }
+        if obfuscator_functions.is_empty() {
+            warn!("No functions remained after filtering out unwind info");
+            return Err("No functions to analyze".to_string());
         }
 
-        info!(
-            "Analysis completed successfully with {} functions",
-            obfuscator_functions.len()
-        );
+        info!("Analysis completed: {} functions (filtered out {} with unwind info)", 
+              obfuscator_functions.len(), unwind_filtered_count);
         Ok(obfuscator_functions)
     }
 }

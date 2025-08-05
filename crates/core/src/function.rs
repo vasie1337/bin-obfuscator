@@ -17,7 +17,6 @@ pub struct ObfuscatorFunction {
     pub size: u32,
     pub instructions: Vec<Instruction>,
     pub original: Option<OriginalFunctionState>,
-    pub unwind_info_address: Option<u32>,
 }
 
 impl ObfuscatorFunction {
@@ -28,7 +27,6 @@ impl ObfuscatorFunction {
             size: pdb_function.size,
             instructions: vec![],
             original: None,
-            unwind_info_address: None,
         }
     }
 

@@ -1,6 +1,4 @@
-use crate::function::ObfuscatorFunction;
 use crate::pe::{PEContext, PEType};
-use common::info;
 use goblin::pe::PE;
 
 #[derive(Debug, Clone)]
@@ -152,92 +150,16 @@ impl PEContext {
         let pe = self.parse()?;
         let exception_data = pe
             .exception_data
-            .ok_or("Exception data not found".to_string())?;
-        let functions = exception_data
+            .ok_or("Exception data not found")?;
+
+        Ok(exception_data
             .functions()
-            .collect::<Vec<_>>()
-            .iter()
-            .map(|f| f.as_ref().unwrap().clone())
-            .collect();
-        Ok(functions)
-    }
-
-    pub fn update_exception_data(
-        &mut self,
-        obfuscator_functions: &Vec<&ObfuscatorFunction>,
-    ) -> Result<(), String> {
-        if obfuscator_functions.is_empty() {
-            return Ok(());
-        }
-
-        let pe = self.parse()?;
-        if pe.exception_data.is_none() {
-            return Err("No exception data found in PE file".to_string());
-        }
-
-        let data_directories = pe
-            .header
-            .optional_header
-            .ok_or("Missing optional header")?
-            .data_directories;
-
-        let exception_dir = data_directories
-            .get_exception_table()
-            .ok_or("No exception directory found")?;
-
-        if exception_dir.virtual_address == 0 {
-            return Err("Exception directory has zero virtual address".to_string());
-        }
-
-        let exception_offset = self.rva_to_file_offset(exception_dir.virtual_address)?;
-
-        const RUNTIME_FUNCTION_SIZE: usize = 12;
-        let available_entries = exception_dir.size as usize / RUNTIME_FUNCTION_SIZE;
-
-        if obfuscator_functions.len() > available_entries {
-            return Err(format!(
-                "Cannot fit {} functions in exception data (max: {})",
-                obfuscator_functions.len(),
-                available_entries
-            ));
-        }
-
-        let mut exception_entries = Vec::with_capacity(obfuscator_functions.len());
-
-        for obfuscator_function in obfuscator_functions {
-            // Create a goblin RuntimeFunction entry
-            let entry = goblin::pe::exception::RuntimeFunction {
-                begin_address: obfuscator_function.rva,
-                end_address: obfuscator_function.rva + obfuscator_function.size as u32,
-                unwind_info_address: obfuscator_function.unwind_info_address.unwrap(),
-            };
-            exception_entries.push(entry);
-        }
-
-        // Write the updated exception data
-        let mut write_offset = exception_offset;
-        for entry in exception_entries {
-            // Write begin_address (4 bytes, little endian)
-            let begin_bytes = entry.begin_address.to_le_bytes();
-            self.write_data(write_offset, &begin_bytes)?;
-            write_offset += 4;
-
-            // Write end_address (4 bytes, little endian)
-            let end_bytes = entry.end_address.to_le_bytes();
-            self.write_data(write_offset, &end_bytes)?;
-            write_offset += 4;
-
-            // Write unwind_info_address (4 bytes, little endian)
-            let unwind_bytes = entry.unwind_info_address.to_le_bytes();
-            self.write_data(write_offset, &unwind_bytes)?;
-            write_offset += 4;
-
-            info!(
-                "Updated exception data for function at 0x{:x}",
-                entry.begin_address
-            );
-        }
-
-        Ok(())
+            .filter_map(|f| f.as_ref().ok().cloned())
+            .filter(|function| {
+                exception_data
+                    .get_unwind_info(*function, &pe.sections)
+                    .map_or(false, |info| info.handler.is_some())
+            })
+            .collect())
     }
 }
