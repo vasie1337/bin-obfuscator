@@ -137,4 +137,15 @@ impl PEContext {
         let file_offset = self.rva_to_file_offset(rva)?;
         self.write_data(file_offset, data)
     }
+
+    pub fn get_exception_data(&self) -> Result<(), String> {
+        let pe = self.parse()?;
+        let exception_data = pe.exception_data.ok_or("Exception data not found".to_string())?;
+        let exception_data = exception_data.functions();
+        for function in exception_data {
+            println!("Function: {:?}", function);
+        }
+        Ok(())
+
+    }
 }
