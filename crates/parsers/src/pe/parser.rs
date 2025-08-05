@@ -1,6 +1,12 @@
 use crate::pe::{PEContext, PEType};
 use goblin::pe::PE;
 
+#[derive(Debug, Clone)]
+pub struct UnwindFunction {
+    pub begin_address: u32,
+    pub end_address: u32,
+}
+
 impl PEContext {
     pub fn new(pe_data: Vec<u8>) -> Self {
         Self { pe_data }
@@ -138,14 +144,29 @@ impl PEContext {
         self.write_data(file_offset, data)
     }
 
-    pub fn get_exception_data(&self) -> Result<(), String> {
+    pub fn get_exception_data(&self) -> Result<Vec<UnwindFunction>, String> {
         let pe = self.parse()?;
         let exception_data = pe.exception_data.ok_or("Exception data not found".to_string())?;
-        let exception_data = exception_data.functions();
-        for function in exception_data {
-            println!("Function: {:?}", function);
+        let functions = exception_data.functions();
+        let mut unwind_functions = Vec::new();
+        
+        for function in functions {
+            let function = function.map_err(|e| format!("Failed to parse function: {}", e))?;
+            unwind_functions.push(UnwindFunction {
+                begin_address: function.begin_address,
+                end_address: function.end_address
+            });
         }
-        Ok(())
-
+        
+        Ok(unwind_functions)
     }
+
+    pub fn update_exception_data(&mut self, _unwind_functions: &[UnwindFunction]) -> Result<(), String> {
+        // This method would rebuild the exception data structure
+        // Implementation depends on your specific requirements for preserving unwind info
+        // during obfuscation
+        Ok(())
+    }
+
+
 }

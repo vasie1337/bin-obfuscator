@@ -82,12 +82,17 @@ impl CompilerContext {
         self.zero_old_function_bytes(runtime_functions)?;
         self.patch_function_redirects(runtime_functions)?;
 
-        self.pe_context
+        let (section_rva, section_size) = self.pe_context
             .borrow_mut()
             .create_executable_section(".vasie", &merged_bytes)
             .map_err(|e| format!("Failed to create executable section: {}", e))?;
 
-        info!("Created .vasie section with {} bytes", merged_bytes.len());
+        info!(
+            "Created .vasie section with {} bytes at RVA {:#x} (virtual size: {})", 
+            merged_bytes.len(), 
+            section_rva, 
+            section_size
+        );
 
         Ok(merged_bytes)
     }
