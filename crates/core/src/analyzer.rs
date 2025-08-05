@@ -42,7 +42,6 @@ impl AnalyzerContext {
                 let mut func = ObfuscatorFunction::new(f);
                 match func.decode(&self.pe_context.borrow()) {
                     Ok(_) => {
-                        func.capture_original_state();
                         Some(func)
                     }
                     Err(_) => {
@@ -59,6 +58,14 @@ impl AnalyzerContext {
             failed_decodes
         );
         functions
+    }
+
+    fn analyze_functions(&self, functions: &mut Vec<ObfuscatorFunction>) -> Result<(), String> {
+        for func in functions.iter_mut() {
+            func.capture_original_state();
+            func.analyze().map_err(|e| e.to_string())?;
+        }
+        Ok(())
     }
 
     fn filter_by_exception(
@@ -109,6 +116,8 @@ impl AnalyzerContext {
         // DEBUG: only main function
         functions = functions.iter().filter(|f| f.name.contains("pre_c_initialization")).cloned().collect();
 
+        self.analyze_functions(&mut functions)?;
+        
         info!(
             "Analysis completed: {} functions ready for obfuscation",
             functions.len()

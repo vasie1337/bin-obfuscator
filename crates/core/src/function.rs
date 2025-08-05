@@ -88,6 +88,11 @@ impl ObfuscatorFunction {
             .unwrap_or(&self.instructions)
     }
 
+    pub fn analyze(&mut self) -> Result<(), String> {
+        info!("Analyzing function {}", self.name);
+        Ok(())
+    }
+
     pub fn decode(&mut self, pe_context: &PEContext) -> Result<(), String> {
         debug!(
             "Decoding function {} at RVA {:#x} with size {}",
@@ -145,11 +150,7 @@ impl ObfuscatorFunction {
         let mut new_ip = start_addr;
         for inst in code.iter_mut() {
             inst.set_ip(new_ip);
-            if inst.ip() == inst.next_ip() && inst.code() == Code::DeclareByte {
-                new_ip += 1
-            } else {
-                new_ip = inst.next_ip();
-            }
+            new_ip = inst.next_ip();
         }
     }
     
