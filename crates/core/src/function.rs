@@ -114,7 +114,7 @@ impl ObfuscatorFunction {
             let instruction = decoder.decode();
             if instruction.code() == Code::INVALID {
                 invalid_instriction_found = true;
-                warn!("Invalid instruction found at RVA {:#x}", instruction.ip());
+                debug!("Invalid instruction found at RVA {:#x}", instruction.ip());
                 break;
             }
             instructions.push(instruction);

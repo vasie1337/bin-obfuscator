@@ -148,9 +148,7 @@ impl PEContext {
         &self,
     ) -> Result<Vec<goblin::pe::exception::RuntimeFunction>, String> {
         let pe = self.parse()?;
-        let exception_data = pe
-            .exception_data
-            .ok_or("Exception data not found")?;
+        let exception_data = pe.exception_data.ok_or("Exception data not found")?;
 
         Ok(exception_data
             .functions()
