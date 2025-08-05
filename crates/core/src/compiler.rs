@@ -18,18 +18,26 @@ impl CompilerContext {
         &mut self,
         runtime_functions: &mut Vec<RuntimeFunction>,
     ) -> Result<Vec<u8>, String> {
+        info!("Starting function compilation process");
+        
         let section_base_rva = self
             .pe_context
             .borrow()
             .get_next_section_rva()
             .map_err(|e| format!("Failed to get next section RVA: {}", e))?;
 
+        info!("New section will start at RVA {:#x}", section_base_rva);
+        
         let mut current_rva = section_base_rva;
         let mut merged_bytes = Vec::new();
 
+        debug!("Shuffling {} runtime functions for obfuscation", runtime_functions.len());
         runtime_functions.shuffle(&mut rand::thread_rng());
 
-        for runtime_function in runtime_functions.iter_mut() {
+        info!("Encoding and merging {} functions into new section", runtime_functions.len());
+        let total_functions = runtime_functions.len();
+        for (index, runtime_function) in runtime_functions.iter_mut().enumerate() {
+            debug!("Processing function {} ({}/{})", runtime_function.name, index + 1, total_functions);
             let function_bytes = runtime_function.encode(current_rva).map_err(|e| {
                 format!("Failed to encode function {}: {}", runtime_function.name, e)
             })?;
@@ -62,6 +70,7 @@ impl CompilerContext {
             current_rva += function_bytes.len() as u64;
         }
 
+        info!("Zeroing old function bytes and patching redirects");
         self.zero_old_function_bytes(runtime_functions)?;
         self.patch_function_redirects(runtime_functions)?;
 
@@ -79,6 +88,8 @@ impl CompilerContext {
         &mut self,
         runtime_functions: &[RuntimeFunction],
     ) -> Result<(), String> {
+        debug!("Patching function redirects for {} functions", runtime_functions.len());
+        
         for runtime_function in runtime_functions {
             let src_rva = runtime_function.get_original_rva();
             let dst_rva = runtime_function.rva;
@@ -104,6 +115,8 @@ impl CompilerContext {
     }
 
     fn zero_old_function_bytes(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
+        debug!("Zeroing old function bytes for {} functions", runtime_functions.len());
+        
         for runtime_function in runtime_functions {
             let original_rva = runtime_function.get_original_rva();
             let original_size = runtime_function.get_original_size();

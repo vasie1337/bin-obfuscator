@@ -1,5 +1,5 @@
 use crate::function::RuntimeFunction;
-use common::error;
+use common::{error, debug};
 pub mod mutation;
 
 pub trait Pass {
@@ -24,16 +24,38 @@ impl PassManager {
     }
 
     pub fn run_passes(&self, runtime_function: &mut RuntimeFunction, count: usize) {
-        for _ in 0..count {
+        debug!("Running {} passes {} times on function {}", self.passes.len(), count, runtime_function.name);
+        
+        for iteration in 0..count {
+            debug!("Pass iteration {} for function {}", iteration + 1, runtime_function.name);
+            
             for pass in &self.passes {
+                debug!("Applying pass '{}' to function {}", pass.name(), runtime_function.name);
+                let pre_instruction_count = runtime_function.instructions.len();
+                
                 match pass.apply(runtime_function) {
-                    Ok(_) => (),
+                    Ok(_) => {
+                        let post_instruction_count = runtime_function.instructions.len();
+                        if pre_instruction_count != post_instruction_count {
+                            debug!(
+                                "Pass '{}' modified function {}: {} -> {} instructions", 
+                                pass.name(), 
+                                runtime_function.name,
+                                pre_instruction_count,
+                                post_instruction_count
+                            );
+                        } else {
+                            debug!("Pass '{}' completed on function {} (no changes)", pass.name(), runtime_function.name);
+                        }
+                    },
                     Err(e) => {
-                        error!("Failed to apply pass {}: {}", pass.name(), e);
+                        error!("Failed to apply pass {} to function {}: {}", pass.name(), runtime_function.name, e);
                     }
                 }
             }
         }
+        
+        debug!("Completed all pass iterations for function {}", runtime_function.name);
     }
 
     pub fn default() -> Self {

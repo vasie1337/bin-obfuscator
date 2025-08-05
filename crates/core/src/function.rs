@@ -2,6 +2,7 @@ use iced_x86::*;
 use parsers::pdb::PDBFunction;
 use parsers::pe::PEContext;
 use std::fmt::{Display, Formatter, Error};
+use common::{debug, warn};
 #[derive(Clone)]
 pub struct OriginalFunctionState {
     pub rva: u32,
@@ -38,8 +39,14 @@ impl RuntimeFunction {
 
     pub fn capture_original_state(&mut self) {
         if self.original.is_some() {
-            panic!("Original state already captured for function {}", self.name);
+            warn!("Original state already captured for function {}, skipping", self.name);
+            return;
         }
+
+        debug!(
+            "Capturing original state for function {} (RVA: {:#x}, size: {}, instructions: {})",
+            self.name, self.rva, self.size, self.instructions.len()
+        );
 
         self.original = Some(OriginalFunctionState {
             rva: self.rva,
@@ -74,6 +81,8 @@ impl RuntimeFunction {
     }
 
     pub fn decode(&mut self, pe_context: &PEContext) -> Result<(), String> {
+        debug!("Decoding function {} at RVA {:#x} with size {}", self.name, self.rva, self.size);
+        
         let bytes = pe_context
             .read_data_at_rva(self.rva, self.size as usize)
             .map_err(|e| {
@@ -82,6 +91,8 @@ impl RuntimeFunction {
                     self.rva, e
                 )
             })?;
+
+        debug!("Read {} bytes for function {}", bytes.len(), self.name);
 
         let mut instructions = Vec::new();
         let mut decoder = Decoder::with_ip(64, &bytes, self.rva as u64, iced_x86::DecoderOptions::NONE);
@@ -93,17 +104,38 @@ impl RuntimeFunction {
 
         instructions.shrink_to_fit();
 
+        debug!(
+            "Successfully decoded function {} into {} instructions", 
+            self.name, 
+            instructions.len()
+        );
+
         self.instructions = instructions;
 
         Ok(())
     }
 
     pub fn encode(&self, rva: u64) -> Result<Vec<u8>, String> {
+        debug!(
+            "Encoding function {} with {} instructions at RVA {:#x}", 
+            self.name, 
+            self.instructions.len(), 
+            rva
+        );
+        
         let block = InstructionBlock::new(&self.instructions, rva);
         let result = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
             Ok(result) => result,
-            Err(e) => return Err(e.to_string()),
+            Err(e) => {
+                return Err(format!("Failed to encode function {}: {}", self.name, e.to_string()));
+            }
         };
+        
+        debug!(
+            "Successfully encoded function {} into {} bytes", 
+            self.name, 
+            result.code_buffer.len()
+        );
         
         Ok(result.code_buffer)
     }

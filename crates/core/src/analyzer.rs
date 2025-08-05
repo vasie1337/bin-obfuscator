@@ -1,5 +1,5 @@
 use crate::{CoreContext, function::RuntimeFunction};
-use common::error;
+use common::{error, info, debug, warn};
 use parsers::pdb::PDBContext;
 use parsers::pe::PEContext;
 use std::cell::RefCell;
@@ -19,22 +19,51 @@ impl AnalyzerContext {
     }
 
     pub fn analyze(&self) -> Result<Vec<RuntimeFunction>, String> {
+        debug!("Starting function analysis from PDB context");
+        
         let pdb_functions = match self.pdb_context.borrow().get_functions() {
-            Ok(functions) => functions,
+            Ok(functions) => {
+                info!("Retrieved {} functions from PDB", functions.len());
+                functions
+            },
             Err(e) => {
+                error!("Failed to retrieve functions from PDB: {}", e);
                 return Err(e.to_string());
             }
         };
 
-        let mut runtime_functions: Vec<RuntimeFunction> = pdb_functions
+        debug!("Filtering functions by size (> 5 bytes)");
+        let filtered_functions: Vec<_> = pdb_functions
             .iter()
             .filter(|f| f.size > 5)
-            //.filter(|f| f.rva == 0x1430)
+            .collect();
+        
+        info!("Filtered to {} functions after size filtering", filtered_functions.len());
+        
+        if filtered_functions.is_empty() {
+            warn!("No functions found after filtering");
+            return Err("No functions to analyze".to_string());
+        }
+
+        debug!("Starting function decoding process");
+        let mut successful_decodes = 0;
+        let mut failed_decodes = 0;
+
+        let mut runtime_functions: Vec<RuntimeFunction> = filtered_functions
+            .iter()
             .filter_map(|pdb_function| {
                 let mut runtime_function = RuntimeFunction::new(pdb_function);
                 match runtime_function.decode(&self.pe_context.borrow()) {
-                    Ok(_) => Some(runtime_function),
+                    Ok(_) => {
+                        successful_decodes += 1;
+                        debug!(
+                            "Successfully decoded function {} at RVA {:#x} with {} instructions",
+                            pdb_function.name, pdb_function.rva, runtime_function.instructions.len()
+                        );
+                        Some(runtime_function)
+                    },
                     Err(e) => {
+                        failed_decodes += 1;
                         error!(
                             "Failed to analyze function {:#x} {}: {}",
                             pdb_function.rva, pdb_function.name, e
@@ -45,12 +74,20 @@ impl AnalyzerContext {
             })
             .collect();
 
+        info!(
+            "Function decoding completed: {} successful, {} failed", 
+            successful_decodes, failed_decodes
+        );
+
         if runtime_functions.len() == 0 {
+            warn!("No runtime functions remained after decoding");
             return Err("No functions to analyze".to_string());
         }
 
+        debug!("Capturing original state for {} runtime functions", runtime_functions.len());
         runtime_functions.iter_mut().for_each(|f| f.capture_original_state());
 
+        info!("Analysis completed successfully with {} runtime functions", runtime_functions.len());
         Ok(runtime_functions)
     }
 }

@@ -1,6 +1,7 @@
 use super::Pass;
 use crate::function::RuntimeFunction;
 use iced_x86::{Code, Instruction, MemoryOperand, OpKind};
+use common::debug;
 
 pub struct MutationPass {}
 
@@ -35,7 +36,14 @@ impl Pass for MutationPass {
     }
 
     fn apply(&self, function: &mut RuntimeFunction) -> Result<(), String> {
+        debug!("Starting mutation pass on function {} with {} instructions", function.name, function.instructions.len());
+        
         let mut result = Vec::with_capacity(function.instructions.len() * 3);
+        let mut mov_reg_reg_mutations = 0;
+        let mut mov_reg_mem_mutations = 0;
+        let mut mov_mem_reg_mutations = 0;
+        let mut lea_mutations = 0;
+        let mut skipped_instructions = 0;
 
         for instruction in function.instructions.iter_mut() {
             match instruction.code() {
@@ -44,6 +52,7 @@ impl Pass for MutationPass {
 
                     match (op_kinds[0], op_kinds[1]) {
                         (OpKind::Register, OpKind::Register) => {
+                            mov_reg_reg_mutations += 1;
                             let dest_reg = instruction.op0_register();
                             let src_reg = instruction.op1_register();
 
@@ -65,9 +74,11 @@ impl Pass for MutationPass {
                             
                             if dest_reg == mem_base || dest_reg == instruction.memory_index() {
                                 result.push(*instruction);
+                                skipped_instructions += 1;
                                 continue;
                             }
                             
+                            mov_reg_mem_mutations += 1;
                             let src_mem = get_memory_operand(instruction);
 
                             let mut xor_instr = Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap();
@@ -89,9 +100,11 @@ impl Pass for MutationPass {
                             
                             if src_reg == mem_base || src_reg == mem_index {
                                 result.push(*instruction);
+                                skipped_instructions += 1;
                                 continue;
                             }
                             
+                            mov_mem_reg_mutations += 1;
                             let mut push_instr = Instruction::with1(Code::Push_r64, src_reg).unwrap();
                             push_instr.set_ip(instruction.ip());
                             result.push(push_instr);
@@ -103,11 +116,13 @@ impl Pass for MutationPass {
                         }                        
                         _ => {
                             result.push(*instruction);
+                            skipped_instructions += 1;
                         }
                     }
                 }
                 Code::Lea_r64_m => {
                     if instruction.memory_displ_size() != 0 {
+                        lea_mutations += 1;
                         let dest_reg = instruction.op0_register();                        
                         const RANDOM_VALUE: u32 = 0x1337;
 
@@ -128,17 +143,31 @@ impl Pass for MutationPass {
                         result.push(popfq_instr);
                     } else {
                         result.push(*instruction);
+                        skipped_instructions += 1;
                     }
                     
                 }
                 _ => {
-                    //println!("Skipping instruction: {:?}", instruction);
                     result.push(*instruction);
+                    skipped_instructions += 1;
                 }
             }
         }
 
         function.instructions = result;
+        
+        let total_mutations = mov_reg_reg_mutations + mov_reg_mem_mutations + mov_mem_reg_mutations + lea_mutations;
+        debug!(
+            "Mutation pass completed on function {}: {} total mutations ({} mov_reg_reg, {} mov_reg_mem, {} mov_mem_reg, {} lea) and {} skipped instructions",
+            function.name,
+            total_mutations,
+            mov_reg_reg_mutations,
+            mov_reg_mem_mutations,
+            mov_mem_reg_mutations,
+            lea_mutations,
+            skipped_instructions
+        );
+        
         Ok(())
     }
 
