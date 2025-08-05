@@ -3,6 +3,7 @@ use crate::pdb::PDBFunction;
 use crate::pe::PEContext;
 use std::fmt::{Display, Formatter, Error};
 use common::{debug, warn};
+use crate::pe::parser::UnwindFunction;
 #[derive(Clone)]
 pub struct OriginalFunctionState {
     pub rva: u32,
@@ -16,6 +17,7 @@ pub struct RuntimeFunction {
     pub size: u32,
     pub instructions: Vec<Instruction>,
     pub original: Option<OriginalFunctionState>,
+    pub unwind_function: Option<UnwindFunction>,
 }
 
 impl RuntimeFunction {
@@ -26,6 +28,7 @@ impl RuntimeFunction {
             size: pdb_function.size,
             instructions: vec![],
             original: None,
+            unwind_function: None,
         }
     }
 

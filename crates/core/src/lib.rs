@@ -43,18 +43,8 @@ pub fn run(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     let pe_context = parse_and_validate_pe(binary_data)?;
     let pdb_context = parse_and_validate_pdb(pdb_data)?;
     
-    info!("Extracting and parsing exception/unwind data");
-    let unwind_functions = pe_context.borrow().get_exception_data()
-        .unwrap_or_else(|e| {
-            warn!("Failed to extract exception data: {}, continuing without unwind info", e);
-            Vec::new()
-        });
-    info!("Found {} unwind functions", unwind_functions.len());
+    let unwind_functions = get_unwind_functions(&pe_context);
 
-    for unwind_function in &unwind_functions {
-        println!("Unwind function: {:?}", unwind_function);
-    }
-    
     let core_context = CoreContext::new(pe_context, pdb_context, unwind_functions);
 
     let mut runtime_functions = analyze_binary(&core_context)?;
@@ -93,6 +83,17 @@ fn parse_and_validate_pdb(pdb_data: &[u8]) -> Result<Rc<RefCell<PDBContext>>, St
     }
     debug!("PDB file successfully parsed and validated");
     Ok(Rc::new(RefCell::new(pdb_context)))
+}
+
+fn get_unwind_functions(pe_context: &Rc<RefCell<PEContext>>) -> Vec<UnwindFunction> {
+    info!("Extracting and parsing exception/unwind data");
+    let unwind_functions = pe_context.borrow().get_exception_data()
+        .unwrap_or_else(|e| {
+            warn!("Failed to extract exception data: {}, continuing without unwind info", e);
+            Vec::new()
+        });
+    info!("Found {} unwind functions", unwind_functions.len());
+    unwind_functions
 }
 
 fn analyze_binary(core_context: &CoreContext) -> Result<Vec<RuntimeFunction>, String> {

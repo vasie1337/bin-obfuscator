@@ -82,6 +82,9 @@ impl CompilerContext {
         self.zero_old_function_bytes(runtime_functions)?;
         self.patch_function_redirects(runtime_functions)?;
 
+        info!("Updating exception data");
+        self.update_exception_data(runtime_functions)?;
+
         let (section_rva, section_size) = self.pe_context
             .borrow_mut()
             .create_executable_section(".vasie", &merged_bytes)
@@ -156,16 +159,9 @@ impl CompilerContext {
 
     fn update_exception_data(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
         debug!("Updating exception data for {} functions", runtime_functions.len());
-        
-        for runtime_function in runtime_functions {
-            let original_rva = runtime_function.get_original_rva();
-            let new_rva = runtime_function.rva;
-            let new_size = runtime_function.size;
-    
-            self.pe_context
-                .borrow_mut()
-                .update_exception_data_from_runtime_functions(&runtime_functions)?;
-        }
+        self.pe_context
+        .borrow_mut()
+        .update_exception_data(&runtime_functions)?;
         Ok(())
     }
 

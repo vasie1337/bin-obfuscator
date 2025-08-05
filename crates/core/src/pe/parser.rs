@@ -162,17 +162,8 @@ impl PEContext {
         Ok(unwind_functions)
     }
 
-    pub fn update_exception_data(&mut self, _unwind_functions: &[UnwindFunction]) -> Result<(), String> {
-        // This method would rebuild the exception data structure
-        // Implementation depends on your specific requirements for preserving unwind info
-        // during obfuscation
-        Ok(())
-    }
-
-    pub fn update_exception_data_from_runtime_functions(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
-        // This method would rebuild the exception data structure
-        // Implementation depends on your specific requirements for preserving unwind info
-        // during obfuscation
+    pub fn update_exception_data(&mut self, _runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
+        
         Ok(())
     }
 
