@@ -26,7 +26,7 @@ impl AnalyzerContext {
             }
         };
 
-        let runtime_functions: Vec<RuntimeFunction> = pdb_functions
+        let mut runtime_functions: Vec<RuntimeFunction> = pdb_functions
             .iter()
             .filter(|f| f.size > 5)
             //.filter(|f| f.rva == 0x1430)
@@ -44,6 +44,12 @@ impl AnalyzerContext {
                 }
             })
             .collect();
+
+        if runtime_functions.len() == 0 {
+            return Err("No functions to analyze".to_string());
+        }
+
+        runtime_functions.iter_mut().for_each(|f| f.capture_original_state());
 
         Ok(runtime_functions)
     }

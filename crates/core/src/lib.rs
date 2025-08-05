@@ -37,22 +37,18 @@ pub fn run(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     let pe_context = parse_and_validate_pe(binary_data)?;
     let pdb_context = parse_and_validate_pdb(pdb_data)?;
     let core_context = CoreContext::new(pe_context, pdb_context);
-    info!("Parsed PE and PDB");
 
     let mut runtime_functions = analyze_binary(&core_context)?;
-    info!("Analyzed {} functions", runtime_functions.len());
 
     obfuscate_binary(&mut runtime_functions)?;
-    info!("Obfuscated {} functions", runtime_functions.len());
 
     let binary_data = compile_binary(&core_context, &mut runtime_functions)?;
-    info!("Compiled {} functions", runtime_functions.len());
 
     let elapsed = start_time.elapsed();
     info!(
-        "Completed in {:.2}ms ({:.6}s)", 
+        "Completed {} functions in {:.2}ms", 
+        runtime_functions.len(),
         elapsed.as_secs_f64() * 1000.0,
-        elapsed.as_secs_f64()
     );
 
     Ok(binary_data)

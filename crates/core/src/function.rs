@@ -37,6 +37,10 @@ impl RuntimeFunction {
     }
 
     pub fn capture_original_state(&mut self) {
+        if self.original.is_some() {
+            panic!("Original state already captured for function {}", self.name);
+        }
+
         self.original = Some(OriginalFunctionState {
             rva: self.rva,
             size: self.size,

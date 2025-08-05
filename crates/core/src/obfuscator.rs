@@ -1,6 +1,5 @@
 use crate::function::RuntimeFunction;
 use crate::passes::PassManager;
-use common::info;
 
 pub struct Obfuscator {
     pass_manager: PassManager,
@@ -18,21 +17,9 @@ impl Obfuscator {
     }
 
     pub fn obfuscate(&self, runtime_functions: &mut Vec<RuntimeFunction>) -> Result<(), String> {
-        info!(
-            "Starting obfuscation of {} functions",
-            runtime_functions.len()
-        );
-
         for runtime_function in runtime_functions.iter_mut() {
-            runtime_function.capture_original_state();
-
             self.pass_manager.run_passes(runtime_function, 1);
         }
-
-        info!(
-            "Completed obfuscation of {} functions",
-            runtime_functions.len()
-        );
         Ok(())
     }
 }

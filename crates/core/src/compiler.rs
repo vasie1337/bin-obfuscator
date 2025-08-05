@@ -100,9 +100,6 @@ impl CompilerContext {
                 src_rva, dst_rva, rel32, runtime_function.name
             );
         }
-
-        info!("Patched {} JMP instructions", runtime_functions.len());
-
         Ok(())
     }
 
@@ -128,8 +125,6 @@ impl CompilerContext {
                 );
             }
         }
-        
-        info!("Filled old function bytes with interrupt instructions for {} functions", runtime_functions.len());
         Ok(())
     }
 
