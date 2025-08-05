@@ -1,6 +1,6 @@
 use crate::pdb::PDBFunction;
 use crate::pe::PEContext;
-use common::{debug, warn};
+use common::{debug, info, warn};
 use iced_x86::*;
 use std::fmt::{Debug, Display, Error, Formatter};
 
@@ -11,6 +11,7 @@ pub struct OriginalFunctionState {
     pub instructions: Vec<Instruction>,
 }
 
+#[derive(Clone)]
 pub struct ObfuscatorFunction {
     pub name: String,
     pub rva: u32,
@@ -140,7 +141,19 @@ impl ObfuscatorFunction {
         Ok(())
     }
 
-    pub fn encode(&self, rva: u64) -> Result<Vec<u8>, String> {
+    pub fn adjust_instruction_addrs(code: &mut [Instruction], start_addr: u64) {
+        let mut new_ip = start_addr;
+        for inst in code.iter_mut() {
+            inst.set_ip(new_ip);
+            if inst.ip() == inst.next_ip() && inst.code() == Code::DeclareByte {
+                new_ip += 1
+            } else {
+                new_ip = inst.next_ip();
+            }
+        }
+    }
+    
+    pub fn encode(&mut self, rva: u64) -> Result<Vec<u8>, String> {
         debug!(
             "Encoding function {} with {} instructions at RVA {:#x}",
             self.name,
@@ -148,7 +161,10 @@ impl ObfuscatorFunction {
             rva
         );
 
+        Self::adjust_instruction_addrs(&mut self.instructions, rva);
+
         let block = InstructionBlock::new(&self.instructions, rva);
+        
         let result = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
             Ok(result) => result,
             Err(e) => {

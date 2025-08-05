@@ -1,7 +1,7 @@
 use crate::function::ObfuscatorFunction;
 use crate::pe::PEContext;
+use iced_x86::{Encoder, Instruction};
 use common::{debug, info};
-use rand::seq::SliceRandom;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -35,8 +35,7 @@ impl CompilerContext {
             "Shuffling {} functions for obfuscation",
             obfuscator_functions.len()
         );
-        obfuscator_functions.shuffle(&mut rand::thread_rng());
-
+        
         info!(
             "Encoding and merging {} functions into new section",
             obfuscator_functions.len()
@@ -59,10 +58,11 @@ impl CompilerContext {
                 Err(e) => {
                     for instruction in &obfuscator_function.instructions {
                         println!(
-                            "0x{:x}: {:?} - {}",
+                            "0x{:x}: {:?} - {} - {}",
                             instruction.ip(),
                             instruction.code(),
-                            instruction.to_string()
+                            instruction.to_string(),
+                            instruction.len()
                         );
                     }
                     return Err(e);

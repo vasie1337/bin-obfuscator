@@ -101,10 +101,13 @@ impl AnalyzerContext {
             return Err("No functions to analyze".to_string());
         }
 
-        let functions = self.filter_by_exception(decoded_functions)?;
+        let mut functions = self.filter_by_exception(decoded_functions)?;
         if functions.is_empty() {
             return Err("No functions to analyze".to_string());
         }
+
+        // DEBUG: only main function
+        functions = functions.iter().filter(|f| f.name.contains("pre_c_initialization")).cloned().collect();
 
         info!(
             "Analysis completed: {} functions ready for obfuscation",
