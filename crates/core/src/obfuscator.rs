@@ -1,6 +1,6 @@
-use crate::function::RuntimeFunction;
+use crate::function::ObfuscatorFunction;
 use crate::passes::PassManager;
-use common::info;
+use common::{debug, info};
 
 pub struct Obfuscator {
     pass_manager: PassManager,
@@ -17,22 +17,45 @@ impl Obfuscator {
         Self { pass_manager }
     }
 
-    pub fn obfuscate(&self, runtime_functions: &mut Vec<RuntimeFunction>) -> Result<(), String> {
-        info!(
-            "Starting obfuscation of {} functions",
-            runtime_functions.len()
+    pub fn obfuscate(
+        &self,
+        obfuscator_functions: &mut Vec<ObfuscatorFunction>,
+    ) -> Result<(), String> {
+        info!("Starting obfuscation with pass manager");
+        debug!(
+            "Applying passes to {} functions",
+            obfuscator_functions.len()
         );
 
-        for runtime_function in runtime_functions.iter_mut() {
-            runtime_function.capture_original_state();
+        let total_functions = obfuscator_functions.len();
+        for (index, obfuscator_function) in obfuscator_functions.iter_mut().enumerate() {
+            debug!(
+                "Obfuscating function {} ({}/{}) with {} instructions",
+                obfuscator_function.name,
+                index + 1,
+                total_functions,
+                obfuscator_function.instructions.len()
+            );
 
-            self.pass_manager.run_passes(runtime_function, 1);
+            let original_instruction_count = obfuscator_function.instructions.len();
+            self.pass_manager.run_passes(obfuscator_function, 1);
+            let new_instruction_count = obfuscator_function.instructions.len();
+
+            debug!(
+                "Function {} obfuscation complete: {} -> {} instructions ({}% change)",
+                obfuscator_function.name,
+                original_instruction_count,
+                new_instruction_count,
+                if original_instruction_count > 0 {
+                    ((new_instruction_count as f64 / original_instruction_count as f64) * 100.0
+                        - 100.0) as i32
+                } else {
+                    0
+                }
+            );
         }
 
-        info!(
-            "Completed obfuscation of {} functions",
-            runtime_functions.len()
-        );
+        info!("Obfuscation completed for all functions");
         Ok(())
     }
 }

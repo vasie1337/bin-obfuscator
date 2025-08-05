@@ -1,13 +1,13 @@
-use crate::{CoreContext, function::RuntimeFunction};
-use common::error;
-use parsers::pdb::PDBContext;
-use parsers::pe::PEContext;
+use crate::pdb::{PDBContext, PDBFunction};
+use crate::pe::PEContext;
+use crate::{CoreContext, function::ObfuscatorFunction};
+use common::info;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct AnalyzerContext {
-    pub pe_context: Rc<RefCell<PEContext>>,
-    pub pdb_context: Rc<RefCell<PDBContext>>,
+    pe_context: Rc<RefCell<PEContext>>,
+    pdb_context: Rc<RefCell<PDBContext>>,
 }
 
 impl AnalyzerContext {
@@ -18,33 +18,98 @@ impl AnalyzerContext {
         }
     }
 
-    pub fn analyze(&self) -> Result<Vec<RuntimeFunction>, String> {
-        let pdb_functions = match self.pdb_context.borrow().get_functions() {
-            Ok(functions) => functions,
-            Err(e) => {
-                return Err(e.to_string());
-            }
-        };
-
-        let runtime_functions: Vec<RuntimeFunction> = pdb_functions
+    fn filter_by_size(&self, pdb_functions: &[PDBFunction]) -> Vec<PDBFunction> {
+        let total = pdb_functions.len();
+        let size_filtered: Vec<PDBFunction> = pdb_functions
             .iter()
             .filter(|f| f.size > 5)
-            //.filter(|f| f.rva == 0x19C0)
-            .filter_map(|pdb_function| {
-                let mut runtime_function = RuntimeFunction::new(pdb_function);
-                match runtime_function.decode(&self.pe_context.borrow()) {
-                    Ok(_) => Some(runtime_function),
-                    Err(e) => {
-                        error!(
-                            "Failed to analyze function {:#x} {}: {}",
-                            pdb_function.rva, pdb_function.name, e
-                        );
+            .cloned()
+            .collect();
+        let filtered_count = total - size_filtered.len();
+        info!(
+            "Size filter: {} functions remaining (filtered out {} ≤5 bytes)",
+            size_filtered.len(),
+            filtered_count
+        );
+        size_filtered
+    }
+
+    fn decode_functions(&self, pdb_functions: Vec<PDBFunction>) -> Vec<ObfuscatorFunction> {
+        let mut failed_decodes = 0;
+        let functions: Vec<ObfuscatorFunction> = pdb_functions
+            .iter()
+            .filter_map(|f| {
+                let mut func = ObfuscatorFunction::new(f);
+                match func.decode(&self.pe_context.borrow()) {
+                    Ok(_) => {
+                        func.capture_original_state();
+                        Some(func)
+                    }
+                    Err(_) => {
+                        failed_decodes += 1;
                         None
                     }
                 }
             })
             .collect();
 
-        Ok(runtime_functions)
+        info!(
+            "Decode: {} functions successfully decoded, {} failed",
+            functions.len(),
+            failed_decodes
+        );
+        functions
+    }
+
+    fn filter_by_exception(
+        &self,
+        mut functions: Vec<ObfuscatorFunction>,
+    ) -> Result<Vec<ObfuscatorFunction>, String> {
+        let exception_functions = self.pe_context.borrow().get_exception_functions()?;
+        let before = functions.len();
+        functions.retain(|f| {
+            !exception_functions
+                .iter()
+                .any(|ef| ef.begin_address == f.rva)
+        });
+
+        let filtered_count = before - functions.len();
+        info!(
+            "Exception filter: {} functions remaining (filtered out {} with unwind info)",
+            functions.len(),
+            filtered_count
+        );
+        Ok(functions)
+    }
+
+    pub fn analyze(&self) -> Result<Vec<ObfuscatorFunction>, String> {
+        let pdb_functions = self
+            .pdb_context
+            .borrow()
+            .get_functions()
+            .map_err(|e| e.to_string())?;
+
+        info!("Retrieved {} functions from PDB", pdb_functions.len());
+
+        let size_filtered = self.filter_by_size(&pdb_functions);
+        if size_filtered.is_empty() {
+            return Err("No functions to analyze".to_string());
+        }
+
+        let decoded_functions = self.decode_functions(size_filtered);
+        if decoded_functions.is_empty() {
+            return Err("No functions to analyze".to_string());
+        }
+
+        let functions = self.filter_by_exception(decoded_functions)?;
+        if functions.is_empty() {
+            return Err("No functions to analyze".to_string());
+        }
+
+        info!(
+            "Analysis completed: {} functions ready for obfuscation",
+            functions.len()
+        );
+        Ok(functions)
     }
 }

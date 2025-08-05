@@ -1,10 +1,10 @@
-use crate::function::RuntimeFunction;
-use common::error;
+use crate::function::ObfuscatorFunction;
+use common::{debug, error};
 pub mod mutation;
 
 pub trait Pass {
     fn name(&self) -> &'static str;
-    fn apply(&self, runtime_function: &mut RuntimeFunction) -> Result<(), String>;
+    fn apply(&self, function: &mut ObfuscatorFunction) -> Result<(), String>;
     fn enabled_by_default(&self) -> bool {
         true
     }
@@ -23,17 +23,64 @@ impl PassManager {
         self.passes.push(pass);
     }
 
-    pub fn run_passes(&self, runtime_function: &mut RuntimeFunction, count: usize) {
-        for _ in 0..count {
+    pub fn run_passes(&self, function: &mut ObfuscatorFunction, count: usize) {
+        debug!(
+            "Running {} passes {} times on function {}",
+            self.passes.len(),
+            count,
+            function.name
+        );
+
+        for iteration in 0..count {
+            debug!(
+                "Pass iteration {} for function {}",
+                iteration + 1,
+                function.name
+            );
+
             for pass in &self.passes {
-                match pass.apply(runtime_function) {
-                    Ok(_) => (),
+                debug!(
+                    "Applying pass '{}' to function {}",
+                    pass.name(),
+                    function.name
+                );
+                let pre_instruction_count = function.instructions.len();
+
+                match pass.apply(function) {
+                    Ok(_) => {
+                        let post_instruction_count = function.instructions.len();
+                        if pre_instruction_count != post_instruction_count {
+                            debug!(
+                                "Pass '{}' modified function {}: {} -> {} instructions",
+                                pass.name(),
+                                function.name,
+                                pre_instruction_count,
+                                post_instruction_count
+                            );
+                        } else {
+                            debug!(
+                                "Pass '{}' completed on function {} (no changes)",
+                                pass.name(),
+                                function.name
+                            );
+                        }
+                    }
                     Err(e) => {
-                        error!("Failed to apply pass {}: {}", pass.name(), e);
+                        error!(
+                            "Failed to apply pass {} to function {}: {}",
+                            pass.name(),
+                            function.name,
+                            e
+                        );
                     }
                 }
             }
         }
+
+        debug!(
+            "Completed all pass iterations for function {}",
+            function.name
+        );
     }
 
     pub fn default() -> Self {

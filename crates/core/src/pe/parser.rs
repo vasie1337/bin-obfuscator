@@ -1,6 +1,12 @@
 use crate::pe::{PEContext, PEType};
 use goblin::pe::PE;
 
+#[derive(Debug, Clone)]
+pub struct UnwindFunction {
+    pub begin_address: u32,
+    pub end_address: u32,
+}
+
 impl PEContext {
     pub fn new(pe_data: Vec<u8>) -> Self {
         Self { pe_data }
@@ -136,5 +142,22 @@ impl PEContext {
     pub fn write_data_at_rva(&mut self, rva: u32, data: &[u8]) -> Result<(), String> {
         let file_offset = self.rva_to_file_offset(rva)?;
         self.write_data(file_offset, data)
+    }
+
+    pub fn get_exception_functions(
+        &self,
+    ) -> Result<Vec<goblin::pe::exception::RuntimeFunction>, String> {
+        let pe = self.parse()?;
+        let exception_data = pe.exception_data.ok_or("Exception data not found")?;
+
+        Ok(exception_data
+            .functions()
+            .filter_map(|f| f.as_ref().ok().cloned())
+            .filter(|function| {
+                exception_data
+                    .get_unwind_info(*function, &pe.sections)
+                    .map_or(false, |info| info.handler.is_some())
+            })
+            .collect())
     }
 }
