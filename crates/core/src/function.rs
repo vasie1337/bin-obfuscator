@@ -97,9 +97,20 @@ impl RuntimeFunction {
         let mut instructions = Vec::new();
         let mut decoder = Decoder::with_ip(64, &bytes, self.rva as u64, iced_x86::DecoderOptions::NONE);
 
+        let mut invalid_instriction_found = false;
+
         while decoder.can_decode() {
             let instruction = decoder.decode();
+            if instruction.code() == Code::INVALID {
+                invalid_instriction_found = true;
+                warn!("Invalid instruction found at RVA {:#x}", instruction.ip());
+                break;
+            }
             instructions.push(instruction);
+        }
+
+        if invalid_instriction_found {
+            return Err(format!("Invalid instruction found in function {}", self.name));
         }
 
         instructions.shrink_to_fit();

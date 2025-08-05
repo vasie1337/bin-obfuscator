@@ -38,9 +38,17 @@ impl CompilerContext {
         let total_functions = runtime_functions.len();
         for (index, runtime_function) in runtime_functions.iter_mut().enumerate() {
             debug!("Processing function {} ({}/{})", runtime_function.name, index + 1, total_functions);
-            let function_bytes = runtime_function.encode(current_rva).map_err(|e| {
+            let function_bytes = match runtime_function.encode(current_rva).map_err(|e| {
                 format!("Failed to encode function {}: {}", runtime_function.name, e)
-            })?;
+            }) {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    for instruction in &runtime_function.instructions {
+                        println!("0x{:x}: {:?} - {}", instruction.ip(), instruction.code(), instruction.to_string());
+                    }
+                    return Err(e);
+                }
+            };
 
             merged_bytes.extend_from_slice(&function_bytes);
 
