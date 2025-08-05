@@ -87,13 +87,14 @@ impl AnalyzerContext {
         debug!("Capturing original state for {} runtime functions", runtime_functions.len());
         runtime_functions.iter_mut().for_each(|f| f.capture_original_state());
 
-        let exception_data = self.pe_context.borrow().get_exception_data()?;
+        let pe_context_borrow = self.pe_context.borrow();
+        let exception_functions = pe_context_borrow.get_exception_functions()?;
 
         for runtime_function in &mut runtime_functions {
-            let unwind_function = exception_data.iter().find(|u| u.begin_address == runtime_function.rva);
-            runtime_function.unwind_function = unwind_function.cloned();
-            if unwind_function.is_some() {
-                debug!("Found unwind function for {} at 0x{:x}", runtime_function.name, unwind_function.unwrap().begin_address);
+            let function = exception_functions.iter().find(|f| f.begin_address == runtime_function.rva);
+            if let Some(func) = function {
+                runtime_function.unwind_info_address = Some(func.unwind_info_address);
+                debug!("Found unwind function for {}", runtime_function.name);
             }
         }
 

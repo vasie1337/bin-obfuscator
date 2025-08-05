@@ -1,9 +1,9 @@
 use iced_x86::*;
 use crate::pdb::PDBFunction;
 use crate::pe::PEContext;
-use std::fmt::{Display, Formatter, Error};
+use std::fmt::{Debug, Display, Formatter, Error};
 use common::{debug, warn};
-use crate::pe::parser::UnwindFunction;
+
 #[derive(Clone)]
 pub struct OriginalFunctionState {
     pub rva: u32,
@@ -17,7 +17,7 @@ pub struct RuntimeFunction {
     pub size: u32,
     pub instructions: Vec<Instruction>,
     pub original: Option<OriginalFunctionState>,
-    pub unwind_function: Option<UnwindFunction>,
+    pub unwind_info_address: Option<u32>,
 }
 
 impl RuntimeFunction {
@@ -28,7 +28,7 @@ impl RuntimeFunction {
             size: pdb_function.size,
             instructions: vec![],
             original: None,
-            unwind_function: None,
+            unwind_info_address: None,
         }
     }
 
@@ -156,6 +156,12 @@ impl RuntimeFunction {
 }
 
 impl Display for RuntimeFunction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "name: {}, rva: {:#x}, size: {}, instructions: {}", self.name, self.rva, self.size, self.instructions.len())
+    }
+}
+
+impl Debug for RuntimeFunction {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         write!(f, "name: {}, rva: {:#x}, size: {}, instructions: {}", self.name, self.rva, self.size, self.instructions.len())
     }

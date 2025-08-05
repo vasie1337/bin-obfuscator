@@ -159,9 +159,10 @@ impl CompilerContext {
 
     fn update_exception_data(&mut self, runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
         debug!("Updating exception data for {} functions", runtime_functions.len());
+        let functions_with_unwind_data = runtime_functions.iter().filter(|f| f.unwind_info_address.is_some()).collect::<Vec<_>>();
         self.pe_context
         .borrow_mut()
-        .update_exception_data(&runtime_functions)?;
+        .update_exception_data(&functions_with_unwind_data)?;
         Ok(())
     }
 

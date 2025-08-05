@@ -4,7 +4,7 @@ use compiler::CompilerContext;
 use function::RuntimeFunction;
 use obfuscator::Obfuscator;
 use pdb::PDBContext;
-use pe::{PEContext, parser::UnwindFunction};
+use pe::PEContext;
 use std::cell::RefCell;
 use std::rc::Rc;
 use instant::Instant;
@@ -20,15 +20,13 @@ pub mod pdb;
 pub struct CoreContext {
     pub pe_context: Rc<RefCell<PEContext>>,
     pub pdb_context: Rc<RefCell<PDBContext>>,
-    pub unwind_functions: Vec<UnwindFunction>,
 }
 
 impl CoreContext {
-    pub fn new(pe_context: Rc<RefCell<PEContext>>, pdb_context: Rc<RefCell<PDBContext>>, unwind_functions: Vec<UnwindFunction>) -> Self {
+    pub fn new(pe_context: Rc<RefCell<PEContext>>, pdb_context: Rc<RefCell<PDBContext>>) -> Self {
         Self {
             pe_context,
             pdb_context,
-            unwind_functions,
         }
     }
 }
@@ -43,9 +41,7 @@ pub fn run(binary_data: &[u8], pdb_data: &[u8]) -> Result<Vec<u8>, String> {
     let pe_context = parse_and_validate_pe(binary_data)?;
     let pdb_context = parse_and_validate_pdb(pdb_data)?;
     
-    let unwind_functions = get_unwind_functions(&pe_context);
-
-    let core_context = CoreContext::new(pe_context, pdb_context, unwind_functions);
+    let core_context = CoreContext::new(pe_context, pdb_context);
 
     let mut runtime_functions = analyze_binary(&core_context)?;
 
@@ -83,17 +79,6 @@ fn parse_and_validate_pdb(pdb_data: &[u8]) -> Result<Rc<RefCell<PDBContext>>, St
     }
     debug!("PDB file successfully parsed and validated");
     Ok(Rc::new(RefCell::new(pdb_context)))
-}
-
-fn get_unwind_functions(pe_context: &Rc<RefCell<PEContext>>) -> Vec<UnwindFunction> {
-    info!("Extracting and parsing exception/unwind data");
-    let unwind_functions = pe_context.borrow().get_exception_data()
-        .unwrap_or_else(|e| {
-            warn!("Failed to extract exception data: {}, continuing without unwind info", e);
-            Vec::new()
-        });
-    info!("Found {} unwind functions", unwind_functions.len());
-    unwind_functions
 }
 
 fn analyze_binary(core_context: &CoreContext) -> Result<Vec<RuntimeFunction>, String> {

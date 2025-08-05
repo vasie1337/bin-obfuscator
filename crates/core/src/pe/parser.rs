@@ -1,6 +1,7 @@
 use crate::function::RuntimeFunction;
 use crate::pe::{PEContext, PEType};
-use goblin::pe::PE;
+use goblin::pe::{PE, exception::RuntimeFunctionIterator};
+use common::info;
 
 #[derive(Debug, Clone)]
 pub struct UnwindFunction {
@@ -145,25 +146,82 @@ impl PEContext {
         self.write_data(file_offset, data)
     }
 
-    pub fn get_exception_data(&self) -> Result<Vec<UnwindFunction>, String> {
+    pub fn get_exception_functions(&self) -> Result<Vec<goblin::pe::exception::RuntimeFunction>, String> {
         let pe = self.parse()?;
         let exception_data = pe.exception_data.ok_or("Exception data not found".to_string())?;
-        let functions = exception_data.functions();
-        let mut unwind_functions = Vec::new();
-        
-        for function in functions {
-            let function = function.map_err(|e| format!("Failed to parse function: {}", e))?;
-            unwind_functions.push(UnwindFunction {
-                begin_address: function.begin_address,
-                end_address: function.end_address
-            });
-        }
-        
-        Ok(unwind_functions)
+        let functions = exception_data.functions().collect::<Vec<_>>().iter().map(|f| f.as_ref().unwrap().clone()).collect();    
+        Ok(functions)
     }
 
-    pub fn update_exception_data(&mut self, _runtime_functions: &[RuntimeFunction]) -> Result<(), String> {
+    pub fn update_exception_data(&mut self, runtime_functions: &Vec<&RuntimeFunction>) -> Result<(), String> {
+        if runtime_functions.is_empty() {
+            return Ok(());
+        }
+
+        let pe = self.parse()?;
+        if pe.exception_data.is_none() {
+            return Err("No exception data found in PE file".to_string());
+        }
+
+        let data_directories = pe.header
+            .optional_header
+            .ok_or("Missing optional header")?
+            .data_directories;
         
+        let exception_dir = data_directories
+            .get_exception_table()
+            .ok_or("No exception directory found")?;
+        
+        if exception_dir.virtual_address == 0 {
+            return Err("Exception directory has zero virtual address".to_string());
+        }
+
+        let exception_offset = self.rva_to_file_offset(exception_dir.virtual_address)?;
+        
+        const RUNTIME_FUNCTION_SIZE: usize = 12;
+        let available_entries = exception_dir.size as usize / RUNTIME_FUNCTION_SIZE;
+        
+        if runtime_functions.len() > available_entries {
+            return Err(format!(
+                "Cannot fit {} functions in exception data (max: {})", 
+                runtime_functions.len(), 
+                available_entries
+            ));
+        }
+
+        let mut exception_entries = Vec::with_capacity(runtime_functions.len());
+        
+        for runtime_function in runtime_functions {
+            // Create a goblin RuntimeFunction entry
+            let entry = goblin::pe::exception::RuntimeFunction {
+                begin_address: runtime_function.rva,
+                end_address: runtime_function.rva + runtime_function.size as u32,
+                unwind_info_address: runtime_function.unwind_info_address.unwrap(),
+            };
+            exception_entries.push(entry);
+        }
+
+        // Write the updated exception data
+        let mut write_offset = exception_offset;
+        for entry in exception_entries {
+            // Write begin_address (4 bytes, little endian)
+            let begin_bytes = entry.begin_address.to_le_bytes();
+            self.write_data(write_offset, &begin_bytes)?;
+            write_offset += 4;
+            
+            // Write end_address (4 bytes, little endian)
+            let end_bytes = entry.end_address.to_le_bytes();
+            self.write_data(write_offset, &end_bytes)?;
+            write_offset += 4;
+            
+            // Write unwind_info_address (4 bytes, little endian)
+            let unwind_bytes = entry.unwind_info_address.to_le_bytes();
+            self.write_data(write_offset, &unwind_bytes)?;
+            write_offset += 4;
+
+            info!("Updated exception data for function at 0x{:x}", entry.begin_address);
+        }
+
         Ok(())
     }
 
