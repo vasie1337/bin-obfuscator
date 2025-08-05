@@ -1,7 +1,7 @@
 use crate::{CoreContext, function::RuntimeFunction};
 use common::{error, info, debug, warn};
-use parsers::pdb::PDBContext;
-use parsers::pe::PEContext;
+use crate::pdb::PDBContext;
+use crate::pe::PEContext;
 use std::cell::RefCell;
 use std::rc::Rc;
 

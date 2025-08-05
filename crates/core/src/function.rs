@@ -1,6 +1,6 @@
 use iced_x86::*;
-use parsers::pdb::PDBFunction;
-use parsers::pe::PEContext;
+use crate::pdb::PDBFunction;
+use crate::pe::PEContext;
 use std::fmt::{Display, Formatter, Error};
 use common::{debug, warn};
 #[derive(Clone)]

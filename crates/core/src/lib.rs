@@ -3,8 +3,8 @@ use common::{Logger, info, debug, warn};
 use compiler::CompilerContext;
 use function::RuntimeFunction;
 use obfuscator::Obfuscator;
-use parsers::pdb::PDBContext;
-use parsers::pe::{PEContext, parser::UnwindFunction};
+use pdb::PDBContext;
+use pe::{PEContext, parser::UnwindFunction};
 use std::cell::RefCell;
 use std::rc::Rc;
 use instant::Instant;
@@ -14,6 +14,8 @@ pub mod compiler;
 pub mod function;
 pub mod obfuscator;
 pub mod passes;
+pub mod pe;
+pub mod pdb;
 
 pub struct CoreContext {
     pub pe_context: Rc<RefCell<PEContext>>,

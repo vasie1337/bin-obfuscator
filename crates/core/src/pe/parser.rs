@@ -1,3 +1,4 @@
+use crate::function::RuntimeFunction;
 use crate::pe::{PEContext, PEType};
 use goblin::pe::PE;
 

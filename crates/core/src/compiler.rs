@@ -1,7 +1,7 @@
 use rand::seq::SliceRandom;
 use crate::function::RuntimeFunction;
 use common::{debug, info};
-use parsers::pe::PEContext;
+use crate::pe::PEContext;
 use std::cell::RefCell;
 use std::rc::Rc;
 
