@@ -109,6 +109,40 @@ impl Pass for MutationPass {
                         }
                     }
                 }
+                Code::Lea_r64_m => {
+                    if instruction.instruction.memory_displ_size() != 0 {
+                        let dest_reg = instruction.instruction.op0_register();
+                        const RANDOM_VALUE: u32 = 0x1337;
+
+                        let displacement = instruction.instruction.memory_displacement64();
+                        let mut new_instruction = instruction.clone();
+                        new_instruction.instruction.set_memory_displacement64(displacement + RANDOM_VALUE as u64);
+                        result.push(new_instruction);
+
+                        if let Some(pushf_instr) = self.create_instruction(
+                            &function.instruction_context,
+                            Instruction::with(Code::Pushfq),
+                        ) {
+                            result.push(pushf_instr);
+                        }
+
+                        if let Some(sub_instr) = self.create_instruction(
+                            &function.instruction_context,
+                            Instruction::with2(Code::Sub_rm64_imm32, dest_reg, RANDOM_VALUE).unwrap(),
+                        ) {
+                            result.push(sub_instr);
+                        }
+
+                        if let Some(popfq_instr) = self.create_instruction(
+                            &function.instruction_context,
+                            Instruction::with(Code::Popfq),
+                        ) {
+                            result.push(popfq_instr);
+                        }
+                    } else {
+                        result.push(instruction.clone());
+                    }
+                }
                 _ => {
                     result.push(instruction.clone());
                 }
