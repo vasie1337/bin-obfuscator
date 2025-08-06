@@ -84,7 +84,7 @@ impl Pass for MutationPass {
         let mut skipped_instructions = 0;
         
         for instruction in function.instructions.iter() {
-            let nop_instr = Instruction::with(Code::Nopw);
+            let nop_instr = Instruction::with(Code::Nopq);
             let re_encoded_nop_instr = re_encode_instruction(nop_instr, instruction.instruction.ip())?;
             result.push(crate::function::InstructionWithId {
                 id: function.next_id,

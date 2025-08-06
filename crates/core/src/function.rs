@@ -274,6 +274,11 @@ impl ObfuscatorFunction {
         self.fix_branches();
 
         let instructions: Vec<Instruction> = self.instructions.iter().map(|inst| inst.instruction).collect();
+
+        //for inst in instructions.iter() {
+        //    println!("{}", inst.to_string());
+        //}
+
         let block = InstructionBlock::new(&instructions, rva);
         
         let result = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
