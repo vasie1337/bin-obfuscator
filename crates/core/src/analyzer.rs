@@ -1,6 +1,9 @@
 use crate::pdb::{PDBContext, PDBFunction};
 use crate::pe::PEContext;
-use crate::{CoreContext, function::ObfuscatorFunction};
+use crate::{
+    CoreContext,
+    function::{Decodable, ObfuscatorFunction, StateManaged},
+};
 use common::info;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -41,10 +44,7 @@ impl AnalyzerContext {
             .filter_map(|f| {
                 let mut func = ObfuscatorFunction::new(f);
                 match func.decode(&self.pe_context.borrow()) {
-                    Ok(_) => {
-                        func.capture_original_state();
-                        Some(func)
-                    }
+                    Ok(_) => Some(func),
                     Err(_) => {
                         failed_decodes += 1;
                         None
@@ -59,6 +59,14 @@ impl AnalyzerContext {
             failed_decodes
         );
         functions
+    }
+
+    fn analyze_functions(&self, functions: &mut Vec<ObfuscatorFunction>) -> Result<(), String> {
+        for func in functions.iter_mut() {
+            func.capture_original_state();
+            func.build_branch_map();
+        }
+        Ok(())
     }
 
     fn filter_by_exception(
@@ -101,10 +109,15 @@ impl AnalyzerContext {
             return Err("No functions to analyze".to_string());
         }
 
-        let functions = self.filter_by_exception(decoded_functions)?;
+        let mut functions = self.filter_by_exception(decoded_functions)?;
         if functions.is_empty() {
             return Err("No functions to analyze".to_string());
         }
+
+        // DEBUG: only main function
+        //functions = functions.iter().filter(|f| f.name.contains("pre_c_initialization")).cloned().collect();
+
+        self.analyze_functions(&mut functions)?;
 
         info!(
             "Analysis completed: {} functions ready for obfuscation",

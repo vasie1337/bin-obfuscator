@@ -1,8 +1,29 @@
+use crate::branches::BranchInfo;
+use crate::instruction::{InstructionContext, InstructionWithId};
 use crate::pdb::PDBFunction;
 use crate::pe::PEContext;
 use common::{debug, warn};
 use iced_x86::*;
-use std::fmt::{Debug, Display, Error, Formatter};
+
+pub trait Decodable {
+    fn decode(&mut self, pe_context: &PEContext) -> Result<(), String>;
+}
+
+pub trait Encodable {
+    fn encode(&mut self, rva: u64) -> Result<Vec<u8>, String>;
+}
+
+pub trait StateManaged {
+    fn capture_original_state(&mut self);
+    fn get_original_rva(&self) -> u32;
+    fn get_original_size(&self) -> u32;
+    fn get_original_instructions(&self) -> Result<&[Instruction], String>;
+}
+
+pub trait AddressUpdatable {
+    fn update_rva(&mut self, rva: u32);
+    fn update_size(&mut self, size: u32);
+}
 
 #[derive(Clone)]
 pub struct OriginalFunctionState {
@@ -11,12 +32,15 @@ pub struct OriginalFunctionState {
     pub instructions: Vec<Instruction>,
 }
 
+#[derive(Clone)]
 pub struct ObfuscatorFunction {
     pub name: String,
     pub rva: u32,
     pub size: u32,
-    pub instructions: Vec<Instruction>,
+    pub instructions: Vec<InstructionWithId>,
     pub original: Option<OriginalFunctionState>,
+    pub branch_map: Vec<BranchInfo>,
+    pub instruction_context: InstructionContext,
 }
 
 impl ObfuscatorFunction {
@@ -27,18 +51,28 @@ impl ObfuscatorFunction {
             size: pdb_function.size,
             instructions: vec![],
             original: None,
+            branch_map: vec![],
+            instruction_context: InstructionContext::new(),
         }
     }
 
-    pub fn update_rva(&mut self, rva: u32) {
+    pub fn get_original(&self) -> Option<&OriginalFunctionState> {
+        self.original.as_ref()
+    }
+}
+
+impl AddressUpdatable for ObfuscatorFunction {
+    fn update_rva(&mut self, rva: u32) {
         self.rva = rva;
     }
 
-    pub fn update_size(&mut self, size: u32) {
+    fn update_size(&mut self, size: u32) {
         self.size = size;
     }
+}
 
-    pub fn capture_original_state(&mut self) {
+impl StateManaged for ObfuscatorFunction {
+    fn capture_original_state(&mut self) {
         if self.original.is_some() {
             warn!(
                 "Original state already captured for function {}, skipping",
@@ -55,39 +89,43 @@ impl ObfuscatorFunction {
             self.instructions.len()
         );
 
+        let original_instructions: Vec<Instruction> = self
+            .instructions
+            .iter()
+            .map(|inst| inst.instruction)
+            .collect();
         self.original = Some(OriginalFunctionState {
             rva: self.rva,
             size: self.size,
-            instructions: self.instructions.clone(),
+            instructions: original_instructions,
         });
     }
 
-    pub fn get_original(&self) -> Option<&OriginalFunctionState> {
-        self.original.as_ref()
-    }
-
-    pub fn get_original_rva(&self) -> u32 {
+    fn get_original_rva(&self) -> u32 {
         self.original
             .as_ref()
             .map(|orig| orig.rva)
             .unwrap_or(self.rva)
     }
 
-    pub fn get_original_size(&self) -> u32 {
+    fn get_original_size(&self) -> u32 {
         self.original
             .as_ref()
             .map(|orig| orig.size)
             .unwrap_or(self.size)
     }
 
-    pub fn get_original_instructions(&self) -> &Vec<Instruction> {
-        self.original
-            .as_ref()
-            .map(|orig| &orig.instructions)
-            .unwrap_or(&self.instructions)
+    fn get_original_instructions(&self) -> Result<&[Instruction], String> {
+        if let Some(orig) = &self.original {
+            Ok(&orig.instructions)
+        } else {
+            Err("Cannot get original instructions when original state is not captured".to_string())
+        }
     }
+}
 
-    pub fn decode(&mut self, pe_context: &PEContext) -> Result<(), String> {
+impl Decodable for ObfuscatorFunction {
+    fn decode(&mut self, pe_context: &PEContext) -> Result<(), String> {
         debug!(
             "Decoding function {} at RVA {:#x} with size {}",
             self.name, self.rva, self.size
@@ -108,19 +146,19 @@ impl ObfuscatorFunction {
         let mut decoder =
             Decoder::with_ip(64, &bytes, self.rva as u64, iced_x86::DecoderOptions::NONE);
 
-        let mut invalid_instriction_found = false;
+        let mut invalid_instruction_found = false;
 
         while decoder.can_decode() {
             let instruction = decoder.decode();
             if instruction.code() == Code::INVALID {
-                invalid_instriction_found = true;
+                invalid_instruction_found = true;
                 debug!("Invalid instruction found at RVA {:#x}", instruction.ip());
                 break;
             }
-            instructions.push(instruction);
+            instructions.push(self.instruction_context.create_instruction(instruction));
         }
 
-        if invalid_instriction_found {
+        if invalid_instruction_found {
             return Err(format!(
                 "Invalid instruction found in function {}",
                 self.name
@@ -139,8 +177,18 @@ impl ObfuscatorFunction {
 
         Ok(())
     }
+}
 
-    pub fn encode(&self, rva: u64) -> Result<Vec<u8>, String> {
+fn adjust_instruction_addrs(code: &mut [InstructionWithId], start_addr: u64) {
+    let mut new_ip = start_addr;
+    for inst_with_id in code.iter_mut() {
+        inst_with_id.instruction.set_ip(new_ip);
+        new_ip = inst_with_id.instruction.next_ip();
+    }
+}
+
+impl Encodable for ObfuscatorFunction {
+    fn encode(&mut self, rva: u64) -> Result<Vec<u8>, String> {
         debug!(
             "Encoding function {} with {} instructions at RVA {:#x}",
             self.name,
@@ -148,7 +196,18 @@ impl ObfuscatorFunction {
             rva
         );
 
-        let block = InstructionBlock::new(&self.instructions, rva);
+        adjust_instruction_addrs(&mut self.instructions, rva);
+
+        self.fix_branches()?;
+
+        let instructions: Vec<Instruction> = self
+            .instructions
+            .iter()
+            .map(|inst| inst.instruction)
+            .collect();
+
+        let block = InstructionBlock::new(&instructions, rva);
+
         let result = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
             Ok(result) => result,
             Err(e) => {
@@ -167,31 +226,5 @@ impl ObfuscatorFunction {
         );
 
         Ok(result.code_buffer)
-    }
-}
-
-impl Display for ObfuscatorFunction {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(
-            f,
-            "name: {}, rva: {:#x}, size: {}, instructions: {}",
-            self.name,
-            self.rva,
-            self.size,
-            self.instructions.len()
-        )
-    }
-}
-
-impl Debug for ObfuscatorFunction {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(
-            f,
-            "name: {}, rva: {:#x}, size: {}, instructions: {}",
-            self.name,
-            self.rva,
-            self.size,
-            self.instructions.len()
-        )
     }
 }
