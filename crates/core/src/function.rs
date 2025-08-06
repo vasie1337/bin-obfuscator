@@ -1,6 +1,6 @@
 use crate::pdb::PDBFunction;
 use crate::pe::PEContext;
-use common::{debug, info, warn};
+use common::{debug, warn};
 use iced_x86::*;
 use std::fmt::{Debug, Display, Error, Formatter};
 
@@ -130,11 +130,19 @@ impl ObfuscatorFunction {
                 let target_rva = self.get_branch_target(instruction);
                 debug!("{}", instruction.to_string());
                 debug!("Target RVA: {:#x}", target_rva);
+                
+                // Check if the target is within the current function boundaries
+                if target_rva < self.rva || target_rva >= self.rva + self.size {
+                    debug!("Branch at RVA {:#x} targets outside function (target: {:#x}, function: {:#x}-{:#x})", 
+                           instruction.ip(), target_rva, self.rva, self.rva + self.size);
+                    continue;
+                }
+                
                 let target_inst_with_id = self.instructions.iter().find(|inst| inst.instruction.ip() == target_rva as u64);
                 if target_inst_with_id.is_none() {
-                    warn!("Target instruction not found for branch at RVA {:#x}", instruction.ip());
-                    println!("{}", instruction.to_string());
-                    println!("Target RVA: {:#x}", target_rva);
+                    warn!("Target instruction not found for internal branch at RVA {:#x}", instruction.ip());
+                    debug!("{}", instruction.to_string());
+                    debug!("Target RVA: {:#x}", target_rva);
                     continue;
                 }
                 let target_instruction = &target_inst_with_id.unwrap().instruction;
