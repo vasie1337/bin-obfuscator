@@ -212,9 +212,8 @@ impl Encodable for ObfuscatorFunction {
             Ok(result) => result,
             Err(e) => {
                 return Err(format!(
-                    "Failed to encode function {}: {}",
-                    self.name,
-                    e.to_string()
+                    "Failed to encode function {}: {e}",
+                    self.name
                 ));
             }
         };

@@ -29,6 +29,12 @@ impl InstructionContext {
     }
 }
 
+impl Default for InstructionContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone)]
 pub struct InstructionWithId {
     pub id: usize,
@@ -57,7 +63,7 @@ impl InstructionWithId {
         let mut encoder = Encoder::new(64);
         encoder
             .encode(&self.instruction, self.instruction.ip())
-            .map_err(|e| format!("Encoding failed: {}", e))?;
+            .map_err(|e| format!("Encoding failed: {e}"))?;
         Ok(encoder.take_buffer())
     }
 

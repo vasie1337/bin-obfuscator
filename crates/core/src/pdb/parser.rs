@@ -24,19 +24,16 @@ impl PDBContext {
         let mut functions = Vec::new();
 
         if let Ok(session) = pdb_object.debug_session() {
-            for func_result in session.functions() {
-                if let Ok(func) = func_result {
-                    functions.push(PDBFunction {
-                        name: self.demangle_name(&func.name.to_string()),
-                        rva: func.address as u32,
-                        size: func.size as u32,
-                    });
-                }
+            for func in session.functions().flatten() {
+                functions.push(PDBFunction {
+                    name: self.demangle_name(func.name.as_ref()),
+                    rva: func.address as u32,
+                    size: func.size as u32,
+                });
             }
         }
 
         functions.sort_by_key(|f: &PDBFunction| f.rva);
-
         functions.dedup_by(|a, b| a.rva == b.rva);
 
         Ok(functions)

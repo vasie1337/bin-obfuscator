@@ -10,7 +10,11 @@ impl MutationPass {
         Self
     }
 
-    fn create_nop(&self, context: &crate::instruction::InstructionContext, ip: u64) -> Option<InstructionWithId> {
+    fn create_nop(
+        &self,
+        context: &crate::instruction::InstructionContext,
+        ip: u64,
+    ) -> Option<InstructionWithId> {
         let nop = context.create_instruction(Instruction::with(Code::Nopd));
         nop.re_encode(ip).ok().map(|instruction| InstructionWithId {
             id: context.next_id(),
@@ -25,18 +29,21 @@ impl Pass for MutationPass {
     }
 
     fn apply(&self, function: &mut ObfuscatorFunction) -> Result<(), String> {
-        let result: Vec<_> = function.instructions
+        let result: Vec<_> = function
+            .instructions
             .iter()
             .enumerate()
             .flat_map(|(i, inst)| {
                 let mut instructions = Vec::with_capacity(2);
-                
+
                 if i % 2 == 0 {
-                    if let Some(nop) = self.create_nop(&function.instruction_context, inst.instruction.ip()) {
+                    if let Some(nop) =
+                        self.create_nop(&function.instruction_context, inst.instruction.ip())
+                    {
                         instructions.push(nop);
                     }
                 }
-                
+
                 instructions.push(inst.clone());
                 instructions
             })
