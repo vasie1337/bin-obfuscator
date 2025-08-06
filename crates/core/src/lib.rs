@@ -1,3 +1,10 @@
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::cargo,
+)]
+
 use analyzer::AnalyzerContext;
 use common::{Logger, debug, info, warn};
 use compiler::CompilerContext;
