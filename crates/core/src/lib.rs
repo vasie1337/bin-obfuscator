@@ -10,9 +10,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub mod analyzer;
+pub mod branches;
 pub mod compiler;
 pub mod function;
-pub mod branches;
 pub mod instruction;
 pub mod obfuscator;
 pub mod passes;

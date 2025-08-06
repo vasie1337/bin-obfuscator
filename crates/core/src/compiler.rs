@@ -1,11 +1,10 @@
-use crate::function::ObfuscatorFunction;
+use crate::function::{AddressUpdatable, Encodable, ObfuscatorFunction, StateManaged};
 use crate::pe::PEContext;
-use common::{debug, info};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct CompilerContext {
-    pub pe_context: Rc<RefCell<PEContext>>,
+    pe_context: Rc<RefCell<PEContext>>,
 }
 
 impl CompilerContext {
@@ -15,168 +14,69 @@ impl CompilerContext {
 
     pub fn compile_functions(
         &mut self,
-        obfuscator_functions: &mut Vec<ObfuscatorFunction>,
+        functions: &mut [ObfuscatorFunction],
     ) -> Result<Vec<u8>, String> {
-        info!("Starting function compilation process");
-
-        let section_base_rva = self
+        let base_rva = self
             .pe_context
             .borrow()
             .get_next_section_rva()
-            .map_err(|e| format!("Failed to get next section RVA: {}", e))?;
+            .map_err(|e| format!("Failed to get section RVA: {}", e))?;
 
-        info!("New section will start at RVA {:#x}", section_base_rva);
+        let (merged_bytes, _) =
+            functions
+                .iter_mut()
+                .try_fold((Vec::new(), base_rva), |(mut bytes, rva), func| {
+                    let encoded = func
+                        .encode(rva)
+                        .map_err(|e| format!("Failed to encode {}: {}", func.name, e))?;
 
-        let mut current_rva = section_base_rva;
-        let mut merged_bytes = Vec::new();
+                    bytes.extend_from_slice(&encoded);
+                    func.update_rva(rva as u32);
+                    func.update_size(encoded.len() as u32);
 
-        info!(
-            "Encoding and merging {} functions into new section",
-            obfuscator_functions.len()
-        );
-        let total_functions = obfuscator_functions.len();
-        for (index, obfuscator_function) in obfuscator_functions.iter_mut().enumerate() {
-            debug!(
-                "Processing function {} ({}/{})",
-                obfuscator_function.name,
-                index + 1,
-                total_functions
-            );
-            let function_bytes = match obfuscator_function.encode(current_rva).map_err(|e| {
-                format!(
-                    "Failed to encode function {}: {}",
-                    obfuscator_function.name, e
-                )
-            }) {
-                Ok(bytes) => bytes,
-                Err(e) => {
-                    for instruction in &obfuscator_function.instructions {
-                        println!(
-                            "0x{:x}: {:?} - {} - {}",
-                            instruction.instruction.ip(),
-                            instruction.instruction.code(),
-                            instruction.instruction.to_string(),
-                            instruction.instruction.len()
-                        );
-                    }
-                    return Err(e);
-                }
-            };
+                    Ok::<_, String>((bytes, rva + encoded.len() as u64))
+                })?;
 
-            merged_bytes.extend_from_slice(&function_bytes);
+        self.zero_old_function_bytes(functions)?;
+        self.patch_function_redirects(functions)?;
 
-            obfuscator_function.update_rva(current_rva as u32);
-            obfuscator_function.update_size(function_bytes.len() as u32);
-
-            debug!(
-                "Encoded function {} with {} bytes at RVA {:#x}",
-                obfuscator_function.name,
-                function_bytes.len(),
-                current_rva
-            );
-
-            if let Some(original) = obfuscator_function.get_original() {
-                debug!(
-                    "Function {} transformation: original RVA {:#x} -> new RVA {:#x}, original size {} -> new size {}, instructions {} -> {}",
-                    obfuscator_function.name,
-                    original.rva,
-                    obfuscator_function.rva,
-                    original.size,
-                    obfuscator_function.size,
-                    original.instructions.len(),
-                    obfuscator_function.instructions.len()
-                );
-            }
-
-            current_rva += function_bytes.len() as u64;
-        }
-
-        info!("Zeroing old function bytes and patching redirects");
-        self.zero_old_function_bytes(obfuscator_functions)?;
-        self.patch_function_redirects(obfuscator_functions)?;
-
-        let (section_rva, section_size) = self
-            .pe_context
+        self.pe_context
             .borrow_mut()
             .create_executable_section(".vasie", &merged_bytes)
-            .map_err(|e| format!("Failed to create executable section: {}", e))?;
-
-        info!(
-            "Created .vasie section with {} bytes at RVA {:#x} (virtual size: {})",
-            merged_bytes.len(),
-            section_rva,
-            section_size
-        );
+            .map_err(|e| format!("Failed to create section: {}", e))?;
 
         Ok(merged_bytes)
     }
 
-    fn zero_old_function_bytes(
-        &mut self,
-        obfuscator_functions: &[ObfuscatorFunction],
-    ) -> Result<(), String> {
-        debug!(
-            "Zeroing old function bytes for {} functions",
-            obfuscator_functions.len()
-        );
-
-        for obfuscator_function in obfuscator_functions {
-            let original_rva = obfuscator_function.get_original_rva();
-            let original_size = obfuscator_function.get_original_size();
-
-            if original_size > 5 {
-                let remaining_bytes = original_size - 5;
-                let interrupt_bytes = vec![0xCC; remaining_bytes as usize];
-
-                let start_rva = original_rva + 5;
+    fn zero_old_function_bytes(&mut self, functions: &[ObfuscatorFunction]) -> Result<(), String> {
+        functions
+            .iter()
+            .filter(|f| f.get_original_size() > 5)
+            .try_for_each(|func| {
+                let rva = func.get_original_rva() + 5;
+                let size = func.get_original_size() - 5;
+                let bytes = vec![0xCC; size as usize];
 
                 self.pe_context
                     .borrow_mut()
-                    .write_data_at_rva(start_rva, &interrupt_bytes)
-                    .map_err(|e| {
-                        format!("Failed to write interrupt bytes at {:#x}: {}", start_rva, e)
-                    })?;
-            } else {
-                debug!(
-                    "Skipping function {} - original instruction length {} is too small for interrupt filling",
-                    obfuscator_function.name, original_size
-                );
-            }
-        }
-        Ok(())
+                    .write_data_at_rva(rva, &bytes)
+                    .map_err(|e| format!("Failed to zero bytes at {:#x}: {}", rva, e))
+            })
     }
 
-    fn patch_function_redirects(
-        &mut self,
-        obfuscator_functions: &[ObfuscatorFunction],
-    ) -> Result<(), String> {
-        debug!(
-            "Patching function redirects for {} functions",
-            obfuscator_functions.len()
-        );
+    fn patch_function_redirects(&mut self, functions: &[ObfuscatorFunction]) -> Result<(), String> {
+        functions.iter().try_for_each(|func| {
+            let src_rva = func.get_original_rva();
+            let rel_offset = (func.rva as i64) - ((src_rva + 5) as i64);
 
-        for obfuscator_function in obfuscator_functions {
-            let src_rva = obfuscator_function.get_original_rva();
-            let dst_rva = obfuscator_function.rva;
-
-            let relative_offset = (dst_rva as i64) - ((src_rva + 5) as i64);
-            let rel32 = relative_offset as i32;
-
-            let mut jmp_bytes = [0u8; 5];
-            jmp_bytes[0] = 0xE9;
-            jmp_bytes[1..].copy_from_slice(&rel32.to_le_bytes());
+            let mut jmp_bytes = [0xE9u8; 5];
+            jmp_bytes[1..].copy_from_slice(&(rel_offset as i32).to_le_bytes());
 
             self.pe_context
                 .borrow_mut()
                 .write_data_at_rva(src_rva, &jmp_bytes)
-                .map_err(|e| format!("Failed to patch JMP at {:#x}: {}", src_rva, e))?;
-
-            debug!(
-                "Patched JMP at 0x{:x} to 0x{:x} (rel_offset: 0x{:x}) for function {}",
-                src_rva, dst_rva, rel32, obfuscator_function.name
-            );
-        }
-        Ok(())
+                .map_err(|e| format!("Failed to patch JMP at {:#x}: {}", src_rva, e))
+        })
     }
 
     pub fn get_binary_data(self) -> Vec<u8> {

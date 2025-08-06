@@ -8,7 +8,7 @@ pub struct InstructionContext {
 impl Clone for InstructionContext {
     fn clone(&self) -> Self {
         Self {
-            next_id: AtomicUsize::new(self.next_id.load(Ordering::SeqCst)),
+            next_id: AtomicUsize::new(self.next_id.load(Ordering::Relaxed)),
         }
     }
 }
@@ -21,7 +21,7 @@ impl InstructionContext {
     }
 
     pub fn next_id(&self) -> usize {
-        self.next_id.fetch_add(1, Ordering::SeqCst)
+        self.next_id.fetch_add(1, Ordering::Relaxed)
     }
 
     pub fn create_instruction(&self, instruction: Instruction) -> InstructionWithId {
@@ -41,32 +41,28 @@ impl InstructionWithId {
     }
 
     pub fn get_memory_operand(&self) -> MemoryOperand {
-        let mem_base = self.instruction.memory_base();
-        let mem_index = self.instruction.memory_index();
-        let mem_scale = self.instruction.memory_index_scale();
-        let mem_displ = self.instruction.memory_displacement64();
-        let mem_displ_size = self.instruction.memory_displ_size();
-        let is_broadcast = self.instruction.is_broadcast();
-        let mem_seg = self.instruction.segment_prefix();
+        let instr = &self.instruction;
         MemoryOperand::new(
-            mem_base,
-            mem_index,
-            mem_scale,
-            mem_displ as i64,
-            mem_displ_size,
-            is_broadcast,
-            mem_seg,
+            instr.memory_base(),
+            instr.memory_index(),
+            instr.memory_index_scale(),
+            instr.memory_displacement64() as i64,
+            instr.memory_displ_size(),
+            instr.is_broadcast(),
+            instr.segment_prefix(),
         )
     }
 
-    pub fn get_bytes(&self) -> Vec<u8> {
+    pub fn get_bytes(&self) -> Result<Vec<u8>, String> {
         let mut encoder = Encoder::new(64);
-        encoder.encode(&self.instruction, self.instruction.ip()).unwrap();
-        encoder.take_buffer()
+        encoder
+            .encode(&self.instruction, self.instruction.ip())
+            .map_err(|e| format!("Encoding failed: {}", e))?;
+        Ok(encoder.take_buffer())
     }
 
     pub fn re_encode(&self, rip: u64) -> Result<Instruction, String> {
-        let bytes = self.get_bytes();
+        let bytes = self.get_bytes()?;
         let mut decoder = Decoder::new(64, &bytes, DecoderOptions::NONE);
         decoder.set_ip(rip);
         let mut inst = Instruction::default();
