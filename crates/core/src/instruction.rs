@@ -46,6 +46,14 @@ impl InstructionWithId {
         Self { id, instruction }
     }
 
+    pub fn get_id(&self) -> usize {
+        self.id
+    }
+
+    pub fn set_id(&mut self, id: usize) {
+        self.id = id;
+    }
+
     pub fn get_memory_operand(&self) -> MemoryOperand {
         let instr = &self.instruction;
         MemoryOperand::new(
