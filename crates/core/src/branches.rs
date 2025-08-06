@@ -24,9 +24,9 @@ impl BranchManager {
         let op_kind = instruction.op0_kind();
         match op_kind {
             OpKind::NearBranch16 => instruction.set_near_branch16(target_rva as u16),
-            OpKind::NearBranch32 => instruction.set_near_branch32(target_rva as u32),
+            OpKind::NearBranch32 => instruction.set_near_branch32(target_rva),
             OpKind::NearBranch64 => instruction.set_near_branch64(target_rva as u64),
-            _ => return Err(format!("Invalid branch operand kind: {:?}", op_kind)),
+            _ => return Err(format!("Invalid branch operand kind: {op_kind:#?}")),
         }
         Ok(())
     }
@@ -47,16 +47,14 @@ impl BranchManager {
             }
 
             let target_rva = Self::get_branch_target(instruction);
-            debug!("{}", instruction.to_string());
-            debug!("Target RVA: {:#x}", target_rva);
+            debug!("{instruction}");
+            debug!("Target RVA: {target_rva:#x}");
 
             if target_rva < function_rva || target_rva >= function_rva + function_size {
                 debug!(
-                    "Branch at RVA {:#x} targets outside function (target: {:#x}, function: {:#x}-{:#x})",
+                    "Branch at RVA {:#x} targets outside function (target: {target_rva:#x}, function: {function_rva:#x}-{:#x})",
                     instruction.ip(),
-                    target_rva,
-                    function_rva,
-                    function_rva + function_size
+                    function_rva + function_size,
                 );
                 continue;
             }
@@ -66,8 +64,8 @@ impl BranchManager {
                 .find(|inst| inst.instruction.ip() == target_rva as u64)
             {
                 debug!(
-                    "Target instruction: {}",
-                    target_inst.instruction.to_string()
+                    "Target instruction: {:#?}",
+                    target_inst.instruction
                 );
                 debug!("================================================");
 
@@ -78,11 +76,10 @@ impl BranchManager {
                 });
             } else {
                 warn!(
-                    "Target instruction not found for internal branch at RVA {:#x} (target: {:#x})",
+                    "Target instruction not found for internal branch at RVA {:#x} (target: {target_rva:#x})",
                     instruction.ip(),
-                    target_rva
                 );
-                debug!("{}", instruction.to_string());
+                debug!("{instruction}");
             }
         }
 
@@ -124,10 +121,10 @@ impl BranchManager {
                 target_ip
             );
             debug!(
-                "Source instruction: {}",
-                source_inst.instruction.to_string()
+                "Source instruction: {:#?}",
+                source_inst.instruction
             );
-            debug!("Target instruction: {}", target_str);
+            debug!("Target instruction: {target_str}");
             debug!("================================================");
 
             Self::set_branch_target(&mut source_inst.instruction, target_ip)?;

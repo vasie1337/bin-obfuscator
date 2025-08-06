@@ -61,7 +61,7 @@ impl AnalyzerContext {
         functions
     }
 
-    fn analyze_functions(&self, functions: &mut Vec<ObfuscatorFunction>) -> Result<(), String> {
+    fn analyze_functions(&self, functions: &mut [ObfuscatorFunction]) -> Result<(), String> {
         for func in functions.iter_mut() {
             func.capture_original_state();
             func.build_branch_map();

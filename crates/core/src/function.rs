@@ -10,7 +10,7 @@ pub trait Decodable {
 }
 
 pub trait Encodable {
-    fn encode(&mut self, rva: u64) -> Result<Vec<u8>, String>;
+    fn encode(&mut self, rva: u32) -> Result<Vec<u8>, String>;
 }
 
 pub trait StateManaged {
@@ -179,16 +179,16 @@ impl Decodable for ObfuscatorFunction {
     }
 }
 
-fn adjust_instruction_addrs(code: &mut [InstructionWithId], start_addr: u64) {
+fn adjust_instruction_addrs(code: &mut [InstructionWithId], start_addr: u32) {
     let mut new_ip = start_addr;
     for inst_with_id in code.iter_mut() {
-        inst_with_id.instruction.set_ip(new_ip);
-        new_ip = inst_with_id.instruction.next_ip();
+        inst_with_id.instruction.set_ip(new_ip as u64);
+        new_ip = inst_with_id.instruction.next_ip() as u32;
     }
 }
 
 impl Encodable for ObfuscatorFunction {
-    fn encode(&mut self, rva: u64) -> Result<Vec<u8>, String> {
+    fn encode(&mut self, rva: u32) -> Result<Vec<u8>, String> {
         debug!(
             "Encoding function {} with {} instructions at RVA {:#x}",
             self.name,
@@ -206,15 +206,14 @@ impl Encodable for ObfuscatorFunction {
             .map(|inst| inst.instruction)
             .collect();
 
-        let block = InstructionBlock::new(&instructions, rva);
+        let block = InstructionBlock::new(&instructions, rva as u64);
 
         let result = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
             Ok(result) => result,
             Err(e) => {
                 return Err(format!(
-                    "Failed to encode function {}: {}",
-                    self.name,
-                    e.to_string()
+                    "Failed to encode function {}: {e}",
+                    self.name
                 ));
             }
         };

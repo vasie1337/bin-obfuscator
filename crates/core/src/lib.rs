@@ -1,3 +1,10 @@
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::cargo,
+)]
+
 use analyzer::AnalyzerContext;
 use common::{Logger, debug, info, warn};
 use compiler::CompilerContext;
@@ -98,7 +105,7 @@ fn analyze_binary(core_context: &CoreContext) -> Result<Vec<ObfuscatorFunction>,
     Ok(obfuscator_functions)
 }
 
-fn obfuscate_binary(functions: &mut Vec<ObfuscatorFunction>) -> Result<(), String> {
+fn obfuscate_binary(functions: &mut [ObfuscatorFunction]) -> Result<(), String> {
     info!(
         "Starting obfuscation phase for {} functions",
         functions.len()
@@ -111,7 +118,7 @@ fn obfuscate_binary(functions: &mut Vec<ObfuscatorFunction>) -> Result<(), Strin
 
 fn compile_binary(
     core_context: &CoreContext,
-    functions: &mut Vec<ObfuscatorFunction>,
+    functions: &mut [ObfuscatorFunction],
 ) -> Result<Vec<u8>, String> {
     info!(
         "Starting compilation phase for {} functions",

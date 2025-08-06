@@ -82,16 +82,12 @@ impl PassManager {
             function.name
         );
     }
-
-    pub fn default() -> Self {
-        let mut manager = Self::new();
-        manager.add_pass(Box::new(mutation::MutationPass::new()));
-        manager
-    }
 }
 
 impl Default for PassManager {
     fn default() -> Self {
-        Self::default()
+        let mut manager = Self::new();
+        manager.add_pass(Box::new(mutation::MutationPass::new()));
+        manager
     }
 }

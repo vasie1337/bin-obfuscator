@@ -20,7 +20,7 @@ impl CompilerContext {
             .pe_context
             .borrow()
             .get_next_section_rva()
-            .map_err(|e| format!("Failed to get section RVA: {}", e))?;
+            .map_err(|e| format!("Failed to get section RVA: {e}"))?;
 
         let (merged_bytes, _) =
             functions
@@ -28,13 +28,13 @@ impl CompilerContext {
                 .try_fold((Vec::new(), base_rva), |(mut bytes, rva), func| {
                     let encoded = func
                         .encode(rva)
-                        .map_err(|e| format!("Failed to encode {}: {}", func.name, e))?;
+                        .map_err(|e| format!("Failed to encode {}: {e}", func.name))?;
 
                     bytes.extend_from_slice(&encoded);
                     func.update_rva(rva as u32);
                     func.update_size(encoded.len() as u32);
 
-                    Ok::<_, String>((bytes, rva + encoded.len() as u64))
+                    Ok::<_, String>((bytes, rva + encoded.len() as u32))
                 })?;
 
         self.zero_old_function_bytes(functions)?;
@@ -43,12 +43,12 @@ impl CompilerContext {
         self.pe_context
             .borrow_mut()
             .create_executable_section(".vasie", &merged_bytes)
-            .map_err(|e| format!("Failed to create section: {}", e))?;
+            .map_err(|e| format!("Failed to create section: {e}"))?;
 
         Ok(merged_bytes)
     }
 
-    fn zero_old_function_bytes(&mut self, functions: &[ObfuscatorFunction]) -> Result<(), String> {
+    fn zero_old_function_bytes(&self, functions: &[ObfuscatorFunction]) -> Result<(), String> {
         functions
             .iter()
             .filter(|f| f.get_original_size() > 5)
@@ -60,11 +60,11 @@ impl CompilerContext {
                 self.pe_context
                     .borrow_mut()
                     .write_data_at_rva(rva, &bytes)
-                    .map_err(|e| format!("Failed to zero bytes at {:#x}: {}", rva, e))
+                    .map_err(|e| format!("Failed to zero bytes at {rva:#x}: {e}"))
             })
     }
 
-    fn patch_function_redirects(&mut self, functions: &[ObfuscatorFunction]) -> Result<(), String> {
+    fn patch_function_redirects(&self, functions: &[ObfuscatorFunction]) -> Result<(), String> {
         functions.iter().try_for_each(|func| {
             let src_rva = func.get_original_rva();
             let rel_offset = (func.rva as i64) - ((src_rva + 5) as i64);
@@ -75,7 +75,7 @@ impl CompilerContext {
             self.pe_context
                 .borrow_mut()
                 .write_data_at_rva(src_rva, &jmp_bytes)
-                .map_err(|e| format!("Failed to patch JMP at {:#x}: {}", src_rva, e))
+                .map_err(|e| format!("Failed to patch JMP at {src_rva:#x}: {e}"))
         })
     }
 

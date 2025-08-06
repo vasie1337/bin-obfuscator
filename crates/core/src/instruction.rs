@@ -29,6 +29,12 @@ impl InstructionContext {
     }
 }
 
+impl Default for InstructionContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone)]
 pub struct InstructionWithId {
     pub id: usize,
@@ -38,6 +44,14 @@ pub struct InstructionWithId {
 impl InstructionWithId {
     pub fn new(id: usize, instruction: Instruction) -> Self {
         Self { id, instruction }
+    }
+
+    pub fn get_id(&self) -> usize {
+        self.id
+    }
+
+    pub fn set_id(&mut self, id: usize) {
+        self.id = id;
     }
 
     pub fn get_memory_operand(&self) -> MemoryOperand {

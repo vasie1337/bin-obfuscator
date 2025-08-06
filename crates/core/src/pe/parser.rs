@@ -156,7 +156,7 @@ impl PEContext {
             .filter(|function| {
                 exception_data
                     .get_unwind_info(*function, &pe.sections)
-                    .map_or(false, |info| info.handler.is_some())
+                    .is_ok_and(|info| info.handler.is_some())
             })
             .collect())
     }
