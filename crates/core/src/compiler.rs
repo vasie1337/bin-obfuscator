@@ -30,11 +30,6 @@ impl CompilerContext {
         let mut current_rva = section_base_rva;
         let mut merged_bytes = Vec::new();
 
-        debug!(
-            "Shuffling {} functions for obfuscation",
-            obfuscator_functions.len()
-        );
-        
         info!(
             "Encoding and merging {} functions into new section",
             obfuscator_functions.len()

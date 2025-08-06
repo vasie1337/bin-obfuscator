@@ -12,6 +12,8 @@ use std::rc::Rc;
 pub mod analyzer;
 pub mod compiler;
 pub mod function;
+pub mod branches;
+pub mod instruction;
 pub mod obfuscator;
 pub mod passes;
 pub mod pdb;
