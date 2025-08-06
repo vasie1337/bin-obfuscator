@@ -114,7 +114,7 @@ impl AnalyzerContext {
         }
 
         // DEBUG: only main function
-        functions = functions.iter().filter(|f| f.name.contains("pre_c_initialization")).cloned().collect();
+        //functions = functions.iter().filter(|f| f.name.contains("pre_c_initialization")).cloned().collect();
 
         self.analyze_functions(&mut functions)?;
         

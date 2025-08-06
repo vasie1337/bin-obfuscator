@@ -1,6 +1,5 @@
 use crate::function::ObfuscatorFunction;
 use crate::pe::PEContext;
-use iced_x86::{Encoder, Instruction};
 use common::{debug, info};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -59,10 +58,10 @@ impl CompilerContext {
                     for instruction in &obfuscator_function.instructions {
                         println!(
                             "0x{:x}: {:?} - {} - {}",
-                            instruction.ip(),
-                            instruction.code(),
-                            instruction.to_string(),
-                            instruction.len()
+                            instruction.instruction.ip(),
+                            instruction.instruction.code(),
+                            instruction.instruction.to_string(),
+                            instruction.instruction.len()
                         );
                     }
                     return Err(e);

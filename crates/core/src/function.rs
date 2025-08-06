@@ -16,8 +16,23 @@ pub struct ObfuscatorFunction {
     pub name: String,
     pub rva: u32,
     pub size: u32,
-    pub instructions: Vec<Instruction>,
+    pub instructions: Vec<InstructionWithId>,
     pub original: Option<OriginalFunctionState>,
+    pub branch_map: Vec<BranchInfo>,
+    pub next_id: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct BranchInfo {
+    pub source_id: usize,
+    pub target_id: usize,
+    pub original_target: u64,
+}
+
+#[derive(Clone)]
+pub struct InstructionWithId {
+    pub id: usize,
+    pub instruction: Instruction,
 }
 
 impl ObfuscatorFunction {
@@ -28,6 +43,8 @@ impl ObfuscatorFunction {
             size: pdb_function.size,
             instructions: vec![],
             original: None,
+            branch_map: vec![],
+            next_id: 0,
         }
     }
 
@@ -56,10 +73,11 @@ impl ObfuscatorFunction {
             self.instructions.len()
         );
 
+        let original_instructions: Vec<Instruction> = self.instructions.iter().map(|inst| inst.instruction).collect();
         self.original = Some(OriginalFunctionState {
             rva: self.rva,
             size: self.size,
-            instructions: self.instructions.clone(),
+            instructions: original_instructions,
         });
     }
 
@@ -82,14 +100,91 @@ impl ObfuscatorFunction {
     }
 
     pub fn get_original_instructions(&self) -> &Vec<Instruction> {
-        self.original
-            .as_ref()
-            .map(|orig| &orig.instructions)
-            .unwrap_or(&self.instructions)
+        if let Some(orig) = &self.original {
+            &orig.instructions
+        } else {
+            // For current instructions, we need to extract just the Instruction part
+            // This is a temporary solution - ideally we'd store original as Vec<InstructionWithId> too
+            panic!("Cannot get original instructions when original state is not captured")
+        }
+    }
+
+    pub fn get_branch_target(&self, instruction: &Instruction) -> u32 {
+        instruction.near_branch_target() as u32
+    }
+
+    pub fn set_branch_target(&self, instruction: &mut Instruction, target_rva: u32) {
+		let op_kind = instruction.op0_kind();
+		match op_kind {
+			OpKind::NearBranch16 => instruction.set_near_branch16(target_rva as u16),
+			OpKind::NearBranch32 => instruction.set_near_branch32(target_rva as u32),
+			OpKind::NearBranch64 => instruction.set_near_branch64(target_rva as u64),
+			_ => (),
+		}
+	}
+
+    pub fn build_branch_map(&mut self) {
+        for inst_with_id in &self.instructions {
+            let instruction = &inst_with_id.instruction;
+            if instruction.flow_control() == FlowControl::ConditionalBranch || instruction.flow_control() == FlowControl::UnconditionalBranch {
+                let target_rva = self.get_branch_target(instruction);
+                debug!("{}", instruction.to_string());
+                debug!("Target RVA: {:#x}", target_rva);
+                let target_inst_with_id = self.instructions.iter().find(|inst| inst.instruction.ip() == target_rva as u64);
+                if target_inst_with_id.is_none() {
+                    warn!("Target instruction not found for branch at RVA {:#x}", instruction.ip());
+                    println!("{}", instruction.to_string());
+                    println!("Target RVA: {:#x}", target_rva);
+                    continue;
+                }
+                let target_instruction = &target_inst_with_id.unwrap().instruction;
+                debug!("Target instruction: {}", target_instruction.to_string());
+                debug!("================================================");
+                self.branch_map.push(BranchInfo {
+                    source_id: inst_with_id.id,
+                    target_id: target_inst_with_id.unwrap().id,
+                    original_target: target_rva as u64,
+                });
+            }
+        }
+    }
+
+    pub fn fix_branches(&mut self) {
+        for branch_info in &self.branch_map {
+            let target_inst = self.instructions.iter().find(|inst| inst.id == branch_info.target_id);
+            if target_inst.is_none() {
+                warn!("Target instruction with ID {} not found", branch_info.target_id);
+                continue;
+            }
+            let target_ip = target_inst.unwrap().instruction.ip() as u32;
+            let target_str = target_inst.unwrap().instruction.to_string();
+            
+            let source_inst = self.instructions.iter_mut().find(|inst| inst.id == branch_info.source_id);
+            if source_inst.is_none() {
+                warn!("Source instruction with ID {} not found", branch_info.source_id);
+                continue;
+            }
+            let source_inst = source_inst.unwrap();
+            
+            let op_kind = source_inst.instruction.op0_kind();
+
+            debug!("Fixing branch from {:#x} to {:#x}", source_inst.instruction.ip(), target_ip);
+            debug!("Source instruction: {}", source_inst.instruction.to_string());
+            debug!("Target instruction: {}", target_str);
+            debug!("================================================");
+
+            match op_kind {
+                OpKind::NearBranch16 => source_inst.instruction.set_near_branch16(target_ip as u16),
+                OpKind::NearBranch32 => source_inst.instruction.set_near_branch32(target_ip as u32),
+                OpKind::NearBranch64 => source_inst.instruction.set_near_branch64(target_ip as u64),
+                _ => (),
+            }
+        }
     }
 
     pub fn analyze(&mut self) -> Result<(), String> {
-        info!("Analyzing function {}", self.name);
+        debug!("Analyzing function {}", self.name);
+        self.build_branch_map();
         Ok(())
     }
 
@@ -123,7 +218,11 @@ impl ObfuscatorFunction {
                 debug!("Invalid instruction found at RVA {:#x}", instruction.ip());
                 break;
             }
-            instructions.push(instruction);
+            instructions.push(InstructionWithId {
+                id: self.next_id,
+                instruction,
+            });
+            self.next_id += 1;
         }
 
         if invalid_instriction_found {
@@ -146,11 +245,11 @@ impl ObfuscatorFunction {
         Ok(())
     }
 
-    pub fn adjust_instruction_addrs(code: &mut [Instruction], start_addr: u64) {
+    pub fn adjust_instruction_addrs(code: &mut [InstructionWithId], start_addr: u64) {
         let mut new_ip = start_addr;
-        for inst in code.iter_mut() {
-            inst.set_ip(new_ip);
-            new_ip = inst.next_ip();
+        for inst_with_id in code.iter_mut() {
+            inst_with_id.instruction.set_ip(new_ip);
+            new_ip = inst_with_id.instruction.next_ip();
         }
     }
     
@@ -164,7 +263,10 @@ impl ObfuscatorFunction {
 
         Self::adjust_instruction_addrs(&mut self.instructions, rva);
 
-        let block = InstructionBlock::new(&self.instructions, rva);
+        self.fix_branches();
+
+        let instructions: Vec<Instruction> = self.instructions.iter().map(|inst| inst.instruction).collect();
+        let block = InstructionBlock::new(&instructions, rva);
         
         let result = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
             Ok(result) => result,

@@ -72,10 +72,6 @@ impl Pass for MutationPass {
         "Mutation Pass"
     }
 
-
-    
-    
-
     fn apply(&self, function: &mut ObfuscatorFunction) -> Result<(), String> {
         debug!(
             "Starting mutation pass on function {} with {} instructions",
@@ -89,10 +85,18 @@ impl Pass for MutationPass {
         
         for instruction in function.instructions.iter() {
             let nop_instr = Instruction::with(Code::Nopq);
-            let re_encoded_nop_instr = re_encode_instruction(nop_instr, instruction.ip())?;
-            result.push(re_encoded_nop_instr);
+            let re_encoded_nop_instr = re_encode_instruction(nop_instr, instruction.instruction.ip())?;
+            result.push(crate::function::InstructionWithId {
+                id: function.next_id,
+                instruction: re_encoded_nop_instr,
+            });
+            function.next_id += 1;
 
-            result.push(*instruction);
+            // Preserve the original instruction's ID
+            result.push(crate::function::InstructionWithId {
+                id: instruction.id,
+                instruction: instruction.instruction,
+            });
         }
 
         function.instructions = result;
