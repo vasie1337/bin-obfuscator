@@ -5,17 +5,14 @@ use crate::pe::PEContext;
 use common::{debug, warn};
 use iced_x86::*;
 
-/// Trait for functions that can be decoded from binary data
 pub trait Decodable {
     fn decode(&mut self, pe_context: &PEContext) -> Result<(), String>;
 }
 
-/// Trait for functions that can be encoded to binary data
 pub trait Encodable {
     fn encode(&mut self, rva: u64) -> Result<Vec<u8>, String>;
 }
 
-/// Trait for functions that support state management
 pub trait StateManaged {
     fn capture_original_state(&mut self);
     fn get_original_rva(&self) -> u32;
@@ -23,7 +20,6 @@ pub trait StateManaged {
     fn get_original_instructions(&self) -> Result<&[Instruction], String>;
 }
 
-/// Trait for functions that support address updates
 pub trait AddressUpdatable {
     fn update_rva(&mut self, rva: u32);
     fn update_size(&mut self, size: u32);
@@ -65,7 +61,6 @@ impl ObfuscatorFunction {
     }
 }
 
-// Implement the AddressUpdatable trait
 impl AddressUpdatable for ObfuscatorFunction {
     fn update_rva(&mut self, rva: u32) {
         self.rva = rva;
@@ -76,7 +71,6 @@ impl AddressUpdatable for ObfuscatorFunction {
     }
 }
 
-// Implement the StateManaged trait
 impl StateManaged for ObfuscatorFunction {
     fn capture_original_state(&mut self) {
         if self.original.is_some() {
@@ -130,7 +124,6 @@ impl StateManaged for ObfuscatorFunction {
     }
 }
 
-// Implement the Decodable trait
 impl Decodable for ObfuscatorFunction {
     fn decode(&mut self, pe_context: &PEContext) -> Result<(), String> {
         debug!(
@@ -186,7 +179,6 @@ impl Decodable for ObfuscatorFunction {
     }
 }
 
-// Helper function for adjusting instruction addresses
 fn adjust_instruction_addrs(code: &mut [InstructionWithId], start_addr: u64) {
     let mut new_ip = start_addr;
     for inst_with_id in code.iter_mut() {
@@ -195,7 +187,6 @@ fn adjust_instruction_addrs(code: &mut [InstructionWithId], start_addr: u64) {
     }
 }
 
-// Implement the Encodable trait
 impl Encodable for ObfuscatorFunction {
     fn encode(&mut self, rva: u64) -> Result<Vec<u8>, String> {
         debug!(
