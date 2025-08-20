@@ -104,7 +104,10 @@ impl PEContext {
         let virtual_size = size;
         let virtual_address = align_up(last_virtual_address + last_virtual_size, section_alignment);
         let size_of_raw_data = align_up(size, file_alignment);
-        let pointer_to_raw_data = align_up(last_pointer_to_raw_data + last_size_of_raw_data, file_alignment);
+        let pointer_to_raw_data = align_up(
+            last_pointer_to_raw_data + last_size_of_raw_data,
+            file_alignment,
+        );
         let new_image_size = align_up(virtual_address + virtual_size, section_alignment);
 
         let new_buffer_size = pointer_to_raw_data + size_of_raw_data;

@@ -211,10 +211,7 @@ impl Encodable for ObfuscatorFunction {
         let result = match BlockEncoder::encode(64, block, BlockEncoderOptions::NONE) {
             Ok(result) => result,
             Err(e) => {
-                return Err(format!(
-                    "Failed to encode function {}: {e}",
-                    self.name
-                ));
+                return Err(format!("Failed to encode function {}: {e}", self.name));
             }
         };
 
