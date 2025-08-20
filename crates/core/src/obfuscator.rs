@@ -14,7 +14,7 @@ impl Obfuscator {
 
     pub fn obfuscate(&self, functions: &mut [ObfuscatorFunction]) -> Result<(), String> {
         functions.iter_mut().for_each(|function| {
-            self.pass_manager.run_passes(function, 1);
+            self.pass_manager.run_passes(function, 2);
         });
         Ok(())
     }

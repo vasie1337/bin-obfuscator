@@ -2,6 +2,7 @@ use super::Pass;
 use crate::function::ObfuscatorFunction;
 use crate::instruction::InstructionWithId;
 use iced_x86::{Code, Instruction, OpKind};
+use rand::Rng;
 
 pub struct MutationPass;
 
@@ -112,11 +113,11 @@ impl Pass for MutationPass {
                 Code::Lea_r64_m => {
                     if instruction.instruction.memory_displ_size() != 0 {
                         let dest_reg = instruction.instruction.op0_register();
-                        const RANDOM_VALUE: u32 = 0x1337;
+                        let random_value = rand::rng().random_range(0..=i16::MAX) as i32;
 
                         let displacement = instruction.instruction.memory_displacement64();
                         let mut new_instruction = instruction.clone();
-                        new_instruction.instruction.set_memory_displacement64(displacement + RANDOM_VALUE as u64);
+                        new_instruction.instruction.set_memory_displacement64(displacement + random_value as u64);
                         result.push(new_instruction);
 
                         if let Some(pushf_instr) = self.create_instruction(
@@ -128,7 +129,7 @@ impl Pass for MutationPass {
 
                         if let Some(sub_instr) = self.create_instruction(
                             &function.instruction_context,
-                            Instruction::with2(Code::Sub_rm64_imm32, dest_reg, RANDOM_VALUE).unwrap(),
+                            Instruction::with2(Code::Sub_rm64_imm32, dest_reg, random_value).unwrap(),
                         ) {
                             result.push(sub_instr);
                         }
