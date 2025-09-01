@@ -114,8 +114,8 @@ impl AnalyzerContext {
             return Err("No functions to analyze".to_string());
         }
 
-        // DEBUG: only main function
-        //functions = functions.iter().filter(|f| f.name.contains("pre_c_initialization")).cloned().collect();
+        // DEBUG: only 1 function
+        //functions = functions.iter().filter(|f| f.name.contains("__scrt_fastfail")).cloned().collect();
 
         self.analyze_functions(&mut functions)?;
 

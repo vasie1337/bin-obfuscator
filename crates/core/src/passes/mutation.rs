@@ -68,33 +68,33 @@ impl MutationPass {
                     result.push(popfq_inst);
                 }
             }
-            (OpKind::Register, OpKind::Memory) => {
-                let dest_reg = instruction.instruction.op0_register();
-                let mem_base = instruction.instruction.memory_base();
-
-                if dest_reg == mem_base || dest_reg == instruction.instruction.memory_index() {
-                    result.push(instruction.clone());
-                    return result;
-                }
-
-                let src_mem = instruction.get_memory_operand();
-                
-                if let Some(mut xor_inst) = self.create_instruction(
-                    context,
-                    Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap(),
-                ) {
-                    xor_inst.set_id(instruction.get_id());
-                    result.push(xor_inst);
-                }
-
-                if let Some(mut add_inst) = self.create_instruction(
-                    context,
-                    Instruction::with2(Code::Add_r64_rm64, dest_reg, src_mem).unwrap(),
-                ) {
-                    add_inst.set_id(instruction.get_id());
-                    result.push(add_inst);
-                }
-            }
+            //(OpKind::Register, OpKind::Memory) => {
+            //    let dest_reg = instruction.instruction.op0_register();
+            //    let mem_base = instruction.instruction.memory_base();
+//
+            //    if dest_reg == mem_base || dest_reg == instruction.instruction.memory_index() {
+            //        result.push(instruction.clone());
+            //        return result;
+            //    }
+//
+            //    let src_mem = instruction.get_memory_operand();
+            //    
+            //    if let Some(mut xor_inst) = self.create_instruction(
+            //        context,
+            //        Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap(),
+            //    ) {
+            //        xor_inst.set_id(instruction.get_id());
+            //        result.push(xor_inst);
+            //    }
+//
+            //    if let Some(mut add_inst) = self.create_instruction(
+            //        context,
+            //        Instruction::with2(Code::Add_r64_rm64, dest_reg, src_mem).unwrap(),
+            //    ) {
+            //        add_inst.set_id(instruction.get_id());
+            //        result.push(add_inst);
+            //    }
+            //}
             _ => {
                 result.push(instruction.clone());
             }
@@ -173,20 +173,19 @@ impl Pass for MutationPass {
                     let mut mutated = self.mutate_mov(instruction, &function.instruction_context);
                     result.append(&mut mutated);
                 }
-                Code::Lea_r64_m => {
-                    let mut mutated = self.mutate_lea(instruction, &function.instruction_context);
-                    result.append(&mut mutated);
-                }
-                Code::Xor_r64_rm64 | Code::Xor_rm64_r64 => {
-                    let mut mutated = self.mutate_xor(instruction, &function.instruction_context);
-                    result.append(&mut mutated);
-                }
-                Code::Call_rm64 => {
-                    let mut mutated = self.mutate_call(instruction, &function.instruction_context);
-                    result.append(&mut mutated);
-                }
+                //Code::Lea_r64_m => {
+                //    let mut mutated = self.mutate_lea(instruction, &function.instruction_context);
+                //    result.append(&mut mutated);
+                //}
+                //Code::Xor_r64_rm64 | Code::Xor_rm64_r64 => {
+                //    let mut mutated = self.mutate_xor(instruction, &function.instruction_context);
+                //    result.append(&mut mutated);
+                //}
+                //Code::Call_rm64 => {
+                //    let mut mutated = self.mutate_call(instruction, &function.instruction_context);
+                //    result.append(&mut mutated);
+                //}
                 _ => {
-                    println!("{:?}", instruction.instruction.code());
                     result.push(instruction.clone());
                 }
             }

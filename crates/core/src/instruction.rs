@@ -84,3 +84,15 @@ impl InstructionWithId {
         Ok(inst)
     }
 }
+
+impl std::fmt::Debug for InstructionWithId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "InstructionWithId {{ id: {}, instruction: {:?} }}", self.id, self.instruction)
+    }
+}
+
+impl std::fmt::Display for InstructionWithId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "InstructionWithId {{ id: {}, instruction: {:?} }}", self.id, self.instruction)
+    }
+}

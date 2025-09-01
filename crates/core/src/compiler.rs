@@ -37,7 +37,7 @@ impl CompilerContext {
                     Ok::<_, String>((bytes, rva + encoded.len() as u32))
                 })?;
 
-        self.zero_old_function_bytes(functions)?;
+        self.trash_old_function_bytes(functions)?;
         self.patch_function_redirects(functions)?;
 
         self.pe_context
@@ -48,7 +48,7 @@ impl CompilerContext {
         Ok(merged_bytes)
     }
 
-    fn zero_old_function_bytes(&self, functions: &[ObfuscatorFunction]) -> Result<(), String> {
+    fn trash_old_function_bytes(&self, functions: &[ObfuscatorFunction]) -> Result<(), String> {
         functions
             .iter()
             .filter(|f| f.get_original_size() > 5)
