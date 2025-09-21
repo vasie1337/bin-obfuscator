@@ -31,14 +31,14 @@ impl MutationPass {
             (OpKind::Register, OpKind::Memory) => {
                 let dest_reg = instruction.instruction.op0_register();
                 let mem_base = instruction.instruction.memory_base();
-                
+
                 if dest_reg == mem_base || dest_reg == instruction.instruction.memory_index() {
                     result.push(instruction.clone());
                     return result;
                 }
-                
+
                 let src_mem = instruction.get_memory_operand();
-                
+
                 if let Some(mut xor_inst) = self.create_instruction(
                     context,
                     Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap(),
@@ -46,13 +46,40 @@ impl MutationPass {
                     xor_inst.set_id(instruction.get_id());
                     result.push(xor_inst);
                 }
-                
+
                 if let Some(mut add_inst) = self.create_instruction(
                     context,
                     Instruction::with2(Code::Add_r64_rm64, dest_reg, src_mem).unwrap(),
                 ) {
                     add_inst.set_id(instruction.get_id());
                     result.push(add_inst);
+                }
+            }
+            (OpKind::Memory, OpKind::Register) => {
+                let src_reg = instruction.instruction.op1_register();
+                let mem_base = instruction.instruction.memory_base();
+
+                if src_reg == mem_base || src_reg == instruction.instruction.memory_index() {
+                    result.push(instruction.clone());
+                    return result;
+                }
+
+                let dest_mem = instruction.get_memory_operand();
+
+                if let Some(mut and_inst) = self.create_instruction(
+                    context,
+                    Instruction::with2(Code::And_rm64_imm32, dest_mem, 0).unwrap(),
+                ) {
+                    and_inst.set_id(instruction.get_id());
+                    result.push(and_inst);
+                }
+
+                if let Some(mut or_inst) = self.create_instruction(
+                    context,
+                    Instruction::with2(Code::Or_rm64_r64, dest_mem, src_reg).unwrap(),
+                ) {
+                    or_inst.set_id(instruction.get_id());
+                    result.push(or_inst);
                 }
             }
             _ => {
@@ -117,6 +144,88 @@ impl MutationPass {
 
         result
     }
+
+    fn mutate_add(&self, instruction: &InstructionWithId, context: &crate::instruction::InstructionContext) -> Vec<InstructionWithId> {
+        let mut result = Vec::new();
+        let op_kinds: Vec<OpKind> = instruction.instruction.op_kinds().collect();
+
+        match (op_kinds[0], op_kinds[1]) {
+            (OpKind::Register, OpKind::Register) => {
+                let dest_reg = instruction.instruction.op0_register();
+                let src_reg = instruction.instruction.op1_register();
+
+                if let Some(mut neg_inst) = self.create_instruction(
+                    context,
+                    Instruction::with1(Code::Neg_rm64, src_reg).unwrap(),
+                ) {
+                    neg_inst.set_id(instruction.get_id());
+                    result.push(neg_inst);
+                }
+
+                if let Some(mut sub_inst) = self.create_instruction(
+                    context,
+                    Instruction::with2(Code::Sub_r64_rm64, dest_reg, src_reg).unwrap(),
+                ) {
+                    sub_inst.set_id(instruction.get_id());
+                    result.push(sub_inst);
+                }
+
+                if let Some(mut neg_inst2) = self.create_instruction(
+                    context,
+                    Instruction::with1(Code::Neg_rm64, src_reg).unwrap(),
+                ) {
+                    neg_inst2.set_id(instruction.get_id());
+                    result.push(neg_inst2);
+                }
+            }
+            _ => {
+                result.push(instruction.clone());
+            }
+        }
+
+        result
+    }
+    
+    fn mutate_or(&self, instruction: &InstructionWithId, context: &crate::instruction::InstructionContext) -> Vec<InstructionWithId> {
+        let mut result = Vec::new();
+        let op_kinds: Vec<OpKind> = instruction.instruction.op_kinds().collect();
+
+        match (op_kinds[0], op_kinds[1]) {
+            (OpKind::Register, OpKind::Register) => {
+                let dest_reg = instruction.instruction.op0_register();
+                let src_reg = instruction.instruction.op1_register();
+
+                if let Some(mut and_inst) = self.create_instruction(
+                    context,
+                    Instruction::with2(Code::And_r64_rm64, dest_reg, src_reg).unwrap(),
+                ) {
+                    and_inst.set_id(instruction.get_id());
+                    result.push(and_inst);
+                }
+
+                if let Some(mut xor_inst) = self.create_instruction(
+                    context,
+                    Instruction::with2(Code::Xor_r64_rm64, dest_reg, src_reg).unwrap(),
+                ) {
+                    xor_inst.set_id(instruction.get_id());
+                    result.push(xor_inst);
+                }
+
+                if let Some(mut xor_inst2) = self.create_instruction(
+                    context,
+                    Instruction::with2(Code::Xor_r64_rm64, dest_reg, src_reg).unwrap(),
+                ) {
+                    xor_inst2.set_id(instruction.get_id());
+                    result.push(xor_inst2);
+                }
+            }
+            _ => {
+                result.push(instruction.clone());
+            }
+        }
+
+        result
+    }
 }
 
 impl Pass for MutationPass {
@@ -143,6 +252,14 @@ impl Pass for MutationPass {
                 }
                 Code::Call_rm64 => {
                     let mut mutated = self.mutate_call(instruction, &function.instruction_context);
+                    result.append(&mut mutated);
+                }
+                Code::Add_r64_rm64 | Code::Add_rm64_r64 => {
+                    let mut mutated = self.mutate_add(instruction, &function.instruction_context);
+                    result.append(&mut mutated);
+                }
+                Code::Or_r64_rm64 | Code::Or_rm64_r64 => {
+                    let mut mutated = self.mutate_or(instruction, &function.instruction_context);
                     result.append(&mut mutated);
                 }
                 _ => {
