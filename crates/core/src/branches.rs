@@ -63,10 +63,7 @@ impl BranchManager {
                 .iter()
                 .find(|inst| inst.instruction.ip() == target_rva as u64)
             {
-                debug!(
-                    "Target instruction: {:#?}",
-                    target_inst.instruction
-                );
+                debug!("Target instruction: {:#?}", target_inst.instruction);
                 debug!("================================================");
 
                 branch_map.push(BranchInfo {
@@ -120,10 +117,7 @@ impl BranchManager {
                 source_inst.instruction.ip(),
                 target_ip
             );
-            debug!(
-                "Source instruction: {:#?}",
-                source_inst.instruction
-            );
+            debug!("Source instruction: {:#?}", source_inst.instruction);
             debug!("Target instruction: {target_str}");
             debug!("================================================");
 
