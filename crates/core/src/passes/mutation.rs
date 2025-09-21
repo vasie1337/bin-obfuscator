@@ -23,73 +23,6 @@ impl MutationPass {
         })
     }
 
-    fn mutate_mov(&self, instruction: &InstructionWithId, context: &crate::instruction::InstructionContext) -> Vec<InstructionWithId> {
-        let mut result = Vec::new();
-        let op_kinds: Vec<OpKind> = instruction.instruction.op_kinds().collect();
-
-        match (op_kinds[0], op_kinds[1]) {
-            (OpKind::Register, OpKind::Memory) => {
-                let dest_reg = instruction.instruction.op0_register();
-                let mem_base = instruction.instruction.memory_base();
-
-                if dest_reg == mem_base || dest_reg == instruction.instruction.memory_index() {
-                    result.push(instruction.clone());
-                    return result;
-                }
-
-                let src_mem = instruction.get_memory_operand();
-
-                if let Some(mut xor_inst) = self.create_instruction(
-                    context,
-                    Instruction::with2(Code::Xor_r64_rm64, dest_reg, dest_reg).unwrap(),
-                ) {
-                    xor_inst.set_id(instruction.get_id());
-                    result.push(xor_inst);
-                }
-
-                if let Some(mut lea_inst) = self.create_instruction(
-                    context,
-                    Instruction::with2(Code::Lea_r64_m, dest_reg, src_mem).unwrap(),
-                ) {
-                    lea_inst.set_id(instruction.get_id());
-                    result.push(lea_inst);
-                }
-            }
-            (OpKind::Memory, OpKind::Register) => {
-                let src_reg = instruction.instruction.op1_register();
-                let mem_base = instruction.instruction.memory_base();
-
-                if src_reg == mem_base || src_reg == instruction.instruction.memory_index() {
-                    result.push(instruction.clone());
-                    return result;
-                }
-
-                let dest_mem = instruction.get_memory_operand();
-
-                if let Some(mut and_inst) = self.create_instruction(
-                    context,
-                    Instruction::with2(Code::And_rm64_imm32, dest_mem, 0).unwrap(),
-                ) {
-                    and_inst.set_id(instruction.get_id());
-                    result.push(and_inst);
-                }
-
-                if let Some(mut or_inst) = self.create_instruction(
-                    context,
-                    Instruction::with2(Code::Or_rm64_r64, dest_mem, src_reg).unwrap(),
-                ) {
-                    or_inst.set_id(instruction.get_id());
-                    result.push(or_inst);
-                }
-            }
-            _ => {
-                result.push(instruction.clone());
-            }
-        }
-
-        result
-    }
-
     fn mutate_lea(&self, instruction: &InstructionWithId, context: &crate::instruction::InstructionContext) -> Vec<InstructionWithId> {
         let mut result = Vec::new();
 
@@ -153,28 +86,19 @@ impl MutationPass {
                     result.push(pushf_inst);
                 }
 
-                if let Some(mut bts_inst) = self.create_instruction(
+                if let Some(clc_inst) = self.create_instruction(
                     context,
-                    Instruction::with2(Code::Bts_rm64_r64, dest_reg, src_reg).unwrap(),
+                    Instruction::with(Code::Clc),
                 ) {
-                    bts_inst.set_id(instruction.get_id());
-                    result.push(bts_inst);
+                    result.push(clc_inst);
                 }
 
-                if let Some(mut btr_inst) = self.create_instruction(
+                if let Some(mut adc_inst) = self.create_instruction(
                     context,
-                    Instruction::with2(Code::Btr_rm64_r64, dest_reg, src_reg).unwrap(),
+                    Instruction::with2(Code::Adc_r64_rm64, dest_reg, src_reg).unwrap(),
                 ) {
-                    btr_inst.set_id(instruction.get_id());
-                    result.push(btr_inst);
-                }
-
-                if let Some(mut xadd_inst) = self.create_instruction(
-                    context,
-                    Instruction::with2(Code::Xadd_rm64_r64, dest_reg, src_reg).unwrap(),
-                ) {
-                    xadd_inst.set_id(instruction.get_id());
-                    result.push(xadd_inst);
+                    adc_inst.set_id(instruction.get_id());
+                    result.push(adc_inst);
                 }
 
                 if let Some(popf_inst) = self.create_instruction(
@@ -262,12 +186,19 @@ impl MutationPass {
                     result.push(pushf_inst);
                 }
 
-                if let Some(mut add_inst) = self.create_instruction(
+                if let Some(clc_inst) = self.create_instruction(
                     context,
-                    Instruction::with2(Code::Add_rm64_imm8, reg, 1).unwrap(),
+                    Instruction::with(Code::Clc),
                 ) {
-                    add_inst.set_id(instruction.get_id());
-                    result.push(add_inst);
+                    result.push(clc_inst);
+                }
+
+                if let Some(mut adc_inst) = self.create_instruction(
+                    context,
+                    Instruction::with2(Code::Adc_rm64_imm8, reg, 1).unwrap(),
+                ) {
+                    adc_inst.set_id(instruction.get_id());
+                    result.push(adc_inst);
                 }
 
                 if let Some(popf_inst) = self.create_instruction(
@@ -300,12 +231,19 @@ impl MutationPass {
                     result.push(pushf_inst);
                 }
 
-                if let Some(mut sub_inst) = self.create_instruction(
+                if let Some(clc_inst) = self.create_instruction(
                     context,
-                    Instruction::with2(Code::Sub_rm64_imm8, reg, 1).unwrap(),
+                    Instruction::with(Code::Clc),
                 ) {
-                    sub_inst.set_id(instruction.get_id());
-                    result.push(sub_inst);
+                    result.push(clc_inst);
+                }
+
+                if let Some(mut sbb_inst) = self.create_instruction(
+                    context,
+                    Instruction::with2(Code::Sbb_rm64_imm8, reg, 1).unwrap(),
+                ) {
+                    sbb_inst.set_id(instruction.get_id());
+                    result.push(sbb_inst);
                 }
 
                 if let Some(popf_inst) = self.create_instruction(
@@ -313,39 +251,6 @@ impl MutationPass {
                     Instruction::with(Code::Popfq),
                 ) {
                     result.push(popf_inst);
-                }
-            }
-            _ => {
-                result.push(instruction.clone());
-            }
-        }
-
-        result
-    }
-
-    fn mutate_cmp(&self, instruction: &InstructionWithId, context: &crate::instruction::InstructionContext) -> Vec<InstructionWithId> {
-        let mut result = Vec::new();
-        let op_kinds: Vec<OpKind> = instruction.instruction.op_kinds().collect();
-
-        match (op_kinds[0], op_kinds[1]) {
-            (OpKind::Register, OpKind::Register) => {
-                let reg1 = instruction.instruction.op0_register();
-                let reg2 = instruction.instruction.op1_register();
-
-                if let Some(mut sub_inst) = self.create_instruction(
-                    context,
-                    Instruction::with2(Code::Sub_r64_rm64, reg1, reg2).unwrap(),
-                ) {
-                    sub_inst.set_id(instruction.get_id());
-                    result.push(sub_inst);
-                }
-
-                if let Some(mut add_inst) = self.create_instruction(
-                    context,
-                    Instruction::with2(Code::Add_r64_rm64, reg1, reg2).unwrap(),
-                ) {
-                    add_inst.set_id(instruction.get_id());
-                    result.push(add_inst);
                 }
             }
             _ => {
@@ -399,10 +304,6 @@ impl Pass for MutationPass {
 
         for instruction in function.instructions.iter() {
             match instruction.instruction.code() {
-                Code::Mov_r64_rm64 | Code::Mov_rm64_r64 => {
-                    let mut mutated = self.mutate_mov(instruction, &function.instruction_context);
-                    result.append(&mut mutated);
-                }
                 Code::Lea_r64_m => {
                     let mut mutated = self.mutate_lea(instruction, &function.instruction_context);
                     result.append(&mut mutated);
@@ -425,10 +326,6 @@ impl Pass for MutationPass {
                 }
                 Code::Dec_rm64 => {
                     let mut mutated = self.mutate_dec(instruction, &function.instruction_context);
-                    result.append(&mut mutated);
-                }
-                Code::Cmp_rm64_r64 | Code::Cmp_r64_rm64 => {
-                    let mut mutated = self.mutate_cmp(instruction, &function.instruction_context);
                     result.append(&mut mutated);
                 }
                 Code::Push_r64 => {
