@@ -1,15 +1,38 @@
-use crate::function::ObfuscatorFunction;
-use common::{debug, error};
-pub mod mutation;
+//! Obfuscation passes for transforming instructions.
+//! 
+//! Each pass focuses on a specific category of transformations:
+//! - `arithmetic`: LEA displacement obfuscation, constant splitting
+//! - `stack`: PUSH/POP to explicit MOV+LEA sequences
+//! - `control_flow`: Call obfuscation (call → lea+push+jmp)
 
+use crate::function::ObfuscatorFunction;
+use ::common::{debug, error};
+
+mod utils;
+pub mod arithmetic;
+pub mod stack;
+pub mod control_flow;
+
+// Re-export for backwards compatibility
+pub use arithmetic::ArithmeticPass;
+pub use stack::StackPass;
+pub use control_flow::ControlFlowPass;
+
+/// Trait for all obfuscation passes.
 pub trait Pass {
+    /// Human-readable name of the pass.
     fn name(&self) -> &'static str;
+    
+    /// Apply the pass to a function's instructions.
     fn apply(&self, function: &mut ObfuscatorFunction) -> Result<(), String>;
+    
+    /// Whether this pass is enabled by default.
     fn enabled_by_default(&self) -> bool {
         true
     }
 }
 
+/// Manages and runs obfuscation passes.
 pub struct PassManager {
     passes: Vec<Box<dyn Pass>>,
 }
@@ -87,7 +110,10 @@ impl PassManager {
 impl Default for PassManager {
     fn default() -> Self {
         let mut manager = Self::new();
-        manager.add_pass(Box::new(mutation::MutationPass::new()));
+        // Add all passes in order
+        manager.add_pass(Box::new(ArithmeticPass::new()));
+        manager.add_pass(Box::new(StackPass::new()));
+        manager.add_pass(Box::new(ControlFlowPass::new()));
         manager
     }
 }
