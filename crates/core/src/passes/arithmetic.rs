@@ -1,12 +1,12 @@
 //! Arithmetic obfuscation pass.
-//! 
+//!
 //! Transforms arithmetic and data movement instructions:
 //! - LEA displacement obfuscation (add random offset, compensate with extra LEAs)
 //! - Constant splitting (split MOV imm into MOV + LEA chain)
 //! - SHL by 1 → ADD reg, reg
 
-use super::utils::create_instruction;
 use super::Pass;
+use super::utils::create_instruction;
 use crate::function::ObfuscatorFunction;
 use crate::instruction::InstructionWithId;
 use iced_x86::{Code, Instruction, MemoryOperand};
@@ -21,7 +21,7 @@ impl ArithmeticPass {
     }
 
     /// LEA displacement obfuscation with multi-step compensation.
-    /// 
+    ///
     /// ```text
     /// lea rax, [rbx + 0x100]
     /// ↓
@@ -29,7 +29,7 @@ impl ArithmeticPass {
     /// lea rax, [rax - K1]
     /// lea rax, [rax - K2]
     /// ```
-    /// 
+    ///
     /// Creates a dependency chain that symbolic executors must track.
     fn mutate_lea(
         &self,
@@ -46,7 +46,7 @@ impl ArithmeticPass {
 
         let dest_reg = instruction.instruction.op0_register();
         let displacement = instruction.instruction.memory_displacement64();
-        
+
         // Generate two random offsets
         let offset1: i64 = rand::rng().random_range(0x100_i64..=0x3FFF_i64);
         let offset2: i64 = rand::rng().random_range(0x100_i64..=0x3FFF_i64);
@@ -54,9 +54,8 @@ impl ArithmeticPass {
 
         // First LEA with modified displacement (keeps original ID)
         let mut lea1 = instruction.clone();
-        lea1.instruction.set_memory_displacement64(
-            displacement.wrapping_add(total_offset as u64)
-        );
+        lea1.instruction
+            .set_memory_displacement64(displacement.wrapping_add(total_offset as u64));
         result.push(lea1);
 
         // Second LEA: subtract offset1
@@ -89,7 +88,7 @@ impl ArithmeticPass {
     }
 
     /// MOV imm64 constant splitting.
-    /// 
+    ///
     /// ```text
     /// mov rax, 0x12345678
     /// ↓
@@ -97,7 +96,7 @@ impl ArithmeticPass {
     /// lea rax, [rax + K1]
     /// lea rax, [rax + K2]
     /// ```
-    /// 
+    ///
     /// Hides constants from static analysis by splitting them.
     fn mutate_mov_imm64(
         &self,
@@ -158,13 +157,13 @@ impl ArithmeticPass {
     }
 
     /// SHL by 1 → ADD reg, reg.
-    /// 
+    ///
     /// ```text
     /// shl rax, 1
     /// ↓
     /// add rax, rax
     /// ```
-    /// 
+    ///
     /// Both produce identical results and flags for shift by 1.
     fn mutate_shl_1(
         &self,
@@ -197,15 +196,13 @@ impl Pass for ArithmeticPass {
         for instruction in function.instructions.iter() {
             let mutated = match instruction.instruction.code() {
                 // LEA displacement obfuscation
-                Code::Lea_r64_m => {
-                    self.mutate_lea(instruction, &function.instruction_context)
-                }
-                
+                Code::Lea_r64_m => self.mutate_lea(instruction, &function.instruction_context),
+
                 // Constant splitting
                 Code::Mov_r64_imm64 => {
                     self.mutate_mov_imm64(instruction, &function.instruction_context)
                 }
-                
+
                 // SHL 1 → ADD
                 Code::Shl_rm64_imm8 if instruction.instruction.immediate8() == 1 => {
                     self.mutate_shl_1(instruction, &function.instruction_context)
@@ -227,4 +224,3 @@ impl Default for ArithmeticPass {
         Self::new()
     }
 }
-

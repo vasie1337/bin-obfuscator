@@ -86,8 +86,11 @@ fn test_obfuscation_preserves_functionality() {
     // Run original binary first to verify it works
     println!("Running original binary...");
     let (original_output, original_success) = run_executable(&exe_path);
-    
-    assert!(original_success, "Original binary failed to execute properly");
+
+    assert!(
+        original_success,
+        "Original binary failed to execute properly"
+    );
     assert!(
         verify_test_output(&original_output, "Original"),
         "Original binary tests failed:\n{}",
@@ -131,8 +134,10 @@ fn test_obfuscation_preserves_functionality() {
     println!("\n=== SUCCESS ===");
     println!("Original size: {} bytes", pe_data.len());
     println!("Obfuscated size: {} bytes", obfuscated_data.len());
-    println!("Size increase: {:.1}%", 
-        (obfuscated_data.len() as f64 / pe_data.len() as f64 - 1.0) * 100.0);
+    println!(
+        "Size increase: {:.1}%",
+        (obfuscated_data.len() as f64 / pe_data.len() as f64 - 1.0) * 100.0
+    );
 }
 
 #[test]
@@ -151,11 +156,15 @@ fn test_original_binary_passes_all_tests() {
         "Test binary did not report success:\n{}",
         output
     );
-    
+
     // Count passed tests
     let pass_count = output.matches("[PASS]").count();
     println!("Original binary: {} tests passed", pass_count);
-    assert!(pass_count >= 20, "Expected at least 20 tests, got {}", pass_count);
+    assert!(
+        pass_count >= 20,
+        "Expected at least 20 tests, got {}",
+        pass_count
+    );
 }
 
 #[test]

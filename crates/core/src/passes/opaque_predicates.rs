@@ -7,8 +7,8 @@
 //! The key insight is that we need to avoid PUSH/POP entirely because
 //! they can interfere with stack-based sequences created by other passes.
 
-use super::utils::create_instruction;
 use super::Pass;
+use super::utils::create_instruction;
 use crate::function::ObfuscatorFunction;
 use crate::instruction::InstructionWithId;
 use iced_x86::{Code, FlowControl, Instruction, MemoryOperand, Register};
@@ -34,7 +34,10 @@ impl OpaquePredicatesPass {
         }
     }
 
-    fn is_safe_insertion_point(instruction: &Instruction, next_instruction: Option<&Instruction>) -> bool {
+    fn is_safe_insertion_point(
+        instruction: &Instruction,
+        next_instruction: Option<&Instruction>,
+    ) -> bool {
         match instruction.flow_control() {
             FlowControl::Next => {}
             _ => return false,
@@ -69,7 +72,10 @@ impl OpaquePredicatesPass {
             for i in 0..next.op_count() {
                 if next.op_kind(i) == iced_x86::OpKind::Register {
                     let reg = next.op_register(i);
-                    if matches!(reg, Register::RAX | Register::EAX | Register::AX | Register::AL | Register::AH) {
+                    if matches!(
+                        reg,
+                        Register::RAX | Register::EAX | Register::AX | Register::AL | Register::AH
+                    ) {
                         return false;
                     }
                 }

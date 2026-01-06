@@ -13,7 +13,10 @@ struct TestRunner {
 
 impl TestRunner {
     fn new() -> Self {
-        Self { passed: 0, failed: 0 }
+        Self {
+            passed: 0,
+            failed: 0,
+        }
     }
 
     fn run<F: FnOnce() -> bool>(&mut self, name: &str, test: F) {
@@ -33,7 +36,10 @@ impl TestRunner {
             println!("=== RESULT: SUCCESS ({} tests passed) ===", self.passed);
             true
         } else {
-            println!("=== RESULT: FAILURE ({} passed, {} failed) ===", self.passed, self.failed);
+            println!(
+                "=== RESULT: FAILURE ({} passed, {} failed) ===",
+                self.passed, self.failed
+            );
             false
         }
     }
@@ -133,12 +139,20 @@ fn bitwise_xor(a: u32, b: u32) -> u32 {
 /// Tests conditional branches (ensures branch fixups work)
 #[inline(never)]
 fn conditional_positive(x: i32) -> i32 {
-    if x > 0 { 1 } else { 0 }
+    if x > 0 {
+        1
+    } else {
+        0
+    }
 }
 
 #[inline(never)]
 fn conditional_compare(a: i32, b: i32) -> i32 {
-    if a > b { a } else { b }
+    if a > b {
+        a
+    } else {
+        b
+    }
 }
 
 /// Tests loops (branch targets after mutation)
@@ -178,15 +192,15 @@ fn main() {
     runner.run("add_i32(5, 3) == 8", || {
         black_box(add_i32(black_box(5), black_box(3))) == 8
     });
-    
+
     runner.run("add_i32(-10, 15) == 5", || {
         black_box(add_i32(black_box(-10), black_box(15))) == 5
     });
-    
+
     runner.run("add_i32(0, 0) == 0", || {
         black_box(add_i32(black_box(0), black_box(0))) == 0
     });
-    
+
     runner.run("add_i64(1000000, 2000000) == 3000000", || {
         black_box(add_i64(black_box(1000000), black_box(2000000))) == 3000000
     });
@@ -195,7 +209,7 @@ fn main() {
     runner.run("sub_i32(10, 3) == 7", || {
         black_box(sub_i32(black_box(10), black_box(3))) == 7
     });
-    
+
     runner.run("sub_i32(5, 10) == -5", || {
         black_box(sub_i32(black_box(5), black_box(10))) == -5
     });
@@ -204,11 +218,11 @@ fn main() {
     runner.run("increment(0) == 1", || {
         black_box(increment(black_box(0))) == 1
     });
-    
+
     runner.run("increment(99) == 100", || {
         black_box(increment(black_box(99))) == 100
     });
-    
+
     runner.run("increment_loop(0, 10) == 10", || {
         black_box(increment_loop(black_box(0), black_box(10))) == 10
     });
@@ -217,7 +231,7 @@ fn main() {
     runner.run("decrement(10) == 9", || {
         black_box(decrement(black_box(10))) == 9
     });
-    
+
     runner.run("decrement(0) == -1", || {
         black_box(decrement(black_box(0))) == -1
     });
@@ -227,7 +241,7 @@ fn main() {
         let arr = [1, 2, 3, 4, 5];
         black_box(array_sum(black_box(&arr))) == 15
     });
-    
+
     runner.run("array_index([10,20,30], 1) == 20", || {
         let arr = [10, 20, 30];
         black_box(array_index(black_box(&arr), black_box(1))) == 20
@@ -237,7 +251,7 @@ fn main() {
     runner.run("nested_calls(1, 2, 3) == 7", || {
         black_box(nested_calls(black_box(1), black_box(2), black_box(3))) == 7
     });
-    
+
     runner.run("deep_call_chain(0) == 15", || {
         black_box(deep_call_chain(black_box(0))) == 15
     });
@@ -246,11 +260,11 @@ fn main() {
     runner.run("bitwise_or(0b1010, 0b0101) == 0b1111", || {
         black_box(bitwise_or(black_box(0b1010), black_box(0b0101))) == 0b1111
     });
-    
+
     runner.run("bitwise_and(0b1110, 0b0111) == 0b0110", || {
         black_box(bitwise_and(black_box(0b1110), black_box(0b0111))) == 0b0110
     });
-    
+
     runner.run("bitwise_xor(0b1010, 0b1100) == 0b0110", || {
         black_box(bitwise_xor(black_box(0b1010), black_box(0b1100))) == 0b0110
     });
@@ -259,15 +273,15 @@ fn main() {
     runner.run("conditional_positive(5) == 1", || {
         black_box(conditional_positive(black_box(5))) == 1
     });
-    
+
     runner.run("conditional_positive(-5) == 0", || {
         black_box(conditional_positive(black_box(-5))) == 0
     });
-    
+
     runner.run("conditional_compare(10, 5) == 10", || {
         black_box(conditional_compare(black_box(10), black_box(5))) == 10
     });
-    
+
     runner.run("conditional_compare(3, 7) == 7", || {
         black_box(conditional_compare(black_box(3), black_box(7))) == 7
     });
@@ -276,7 +290,7 @@ fn main() {
     runner.run("sum_to_n(10) == 55", || {
         black_box(sum_to_n(black_box(10))) == 55
     });
-    
+
     runner.run("factorial(5) == 120", || {
         black_box(factorial(black_box(5))) == 120
     });

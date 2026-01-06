@@ -1,13 +1,13 @@
 //! Stack operation obfuscation pass.
-//! 
+//!
 //! Transforms stack operations into explicit sequences:
 //! - PUSH → MOV [rsp-8], reg + LEA rsp, [rsp-8]
 //! - POP → MOV reg, [rsp] + LEA rsp, [rsp+8]
-//! 
+//!
 //! Uses LEA for stack adjustment to avoid flag modification.
 
-use super::utils::create_instruction;
 use super::Pass;
+use super::utils::create_instruction;
 use crate::function::ObfuscatorFunction;
 use crate::instruction::InstructionWithId;
 use iced_x86::{Code, Instruction, MemoryOperand, Register};
@@ -21,7 +21,7 @@ impl StackPass {
     }
 
     /// PUSH to explicit stack operations.
-    /// 
+    ///
     /// ```text
     /// push rax
     /// ↓
@@ -67,7 +67,7 @@ impl StackPass {
     }
 
     /// POP to explicit stack operations.
-    /// 
+    ///
     /// ```text
     /// pop rax
     /// ↓
@@ -123,12 +123,8 @@ impl Pass for StackPass {
 
         for instruction in function.instructions.iter() {
             let mutated = match instruction.instruction.code() {
-                Code::Push_r64 => {
-                    self.mutate_push(instruction, &function.instruction_context)
-                }
-                Code::Pop_r64 => {
-                    self.mutate_pop(instruction, &function.instruction_context)
-                }
+                Code::Push_r64 => self.mutate_push(instruction, &function.instruction_context),
+                Code::Pop_r64 => self.mutate_pop(instruction, &function.instruction_context),
                 _ => vec![instruction.clone()],
             };
 
@@ -145,4 +141,3 @@ impl Default for StackPass {
         Self::new()
     }
 }
-

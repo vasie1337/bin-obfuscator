@@ -1,5 +1,5 @@
 //! Obfuscation passes for transforming instructions.
-//! 
+//!
 //! Each pass focuses on a specific category of transformations:
 //! - `arithmetic`: LEA displacement obfuscation, constant splitting
 //! - `stack`: PUSH/POP to explicit MOV+LEA sequences
@@ -9,26 +9,26 @@
 use crate::function::ObfuscatorFunction;
 use ::common::{debug, error};
 
-mod utils;
 pub mod arithmetic;
-pub mod stack;
 pub mod control_flow;
 pub mod opaque_predicates;
+pub mod stack;
+mod utils;
 
 // Re-export passes
 pub use arithmetic::ArithmeticPass;
-pub use stack::StackPass;
 pub use control_flow::ControlFlowPass;
 pub use opaque_predicates::OpaquePredicatesPass;
+pub use stack::StackPass;
 
 /// Trait for all obfuscation passes.
 pub trait Pass {
     /// Human-readable name of the pass.
     fn name(&self) -> &'static str;
-    
+
     /// Apply the pass to a function's instructions.
     fn apply(&self, function: &mut ObfuscatorFunction) -> Result<(), String>;
-    
+
     /// Whether this pass is enabled by default.
     fn enabled_by_default(&self) -> bool {
         true

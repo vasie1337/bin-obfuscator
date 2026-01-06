@@ -27,14 +27,38 @@ pub fn create_instruction(
 pub fn is_extended_register(reg: Register) -> bool {
     matches!(
         reg,
-        Register::R8 | Register::R9 | Register::R10 | Register::R11 |
-        Register::R12 | Register::R13 | Register::R14 | Register::R15 |
-        Register::R8D | Register::R9D | Register::R10D | Register::R11D |
-        Register::R12D | Register::R13D | Register::R14D | Register::R15D |
-        Register::R8W | Register::R9W | Register::R10W | Register::R11W |
-        Register::R12W | Register::R13W | Register::R14W | Register::R15W |
-        Register::R8L | Register::R9L | Register::R10L | Register::R11L |
-        Register::R12L | Register::R13L | Register::R14L | Register::R15L
+        Register::R8
+            | Register::R9
+            | Register::R10
+            | Register::R11
+            | Register::R12
+            | Register::R13
+            | Register::R14
+            | Register::R15
+            | Register::R8D
+            | Register::R9D
+            | Register::R10D
+            | Register::R11D
+            | Register::R12D
+            | Register::R13D
+            | Register::R14D
+            | Register::R15D
+            | Register::R8W
+            | Register::R9W
+            | Register::R10W
+            | Register::R11W
+            | Register::R12W
+            | Register::R13W
+            | Register::R14W
+            | Register::R15W
+            | Register::R8L
+            | Register::R9L
+            | Register::R10L
+            | Register::R11L
+            | Register::R12L
+            | Register::R13L
+            | Register::R14L
+            | Register::R15L
     )
 }
 
@@ -48,7 +72,7 @@ pub fn get_scratch_register(avoid: &[Register]) -> Register {
         Register::R9,
         Register::R8,
     ];
-    
+
     for &reg in &candidates {
         if !avoid.contains(&reg) {
             return reg;
@@ -56,4 +80,3 @@ pub fn get_scratch_register(avoid: &[Register]) -> Register {
     }
     Register::R11 // Fallback
 }
-
