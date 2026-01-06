@@ -2,6 +2,10 @@
 //!
 //! These tests build the test-binary, run the obfuscator on it,
 //! and verify the obfuscated binary produces identical output.
+//!
+//! NOTE: These tests only run on Windows as the obfuscator targets Windows PE binaries.
+
+#![cfg(target_os = "windows")]
 
 use std::fs;
 use std::path::PathBuf;
