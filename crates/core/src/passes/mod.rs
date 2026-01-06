@@ -4,6 +4,7 @@
 //! - `arithmetic`: LEA displacement obfuscation, constant splitting
 //! - `stack`: PUSH/POP to explicit MOV+LEA sequences
 //! - `control_flow`: Call obfuscation (call → lea+push+jmp)
+//! - `opaque_predicates`: Insert always-true/false computations
 
 use crate::function::ObfuscatorFunction;
 use ::common::{debug, error};
@@ -12,11 +13,13 @@ mod utils;
 pub mod arithmetic;
 pub mod stack;
 pub mod control_flow;
+pub mod opaque_predicates;
 
-// Re-export for backwards compatibility
+// Re-export passes
 pub use arithmetic::ArithmeticPass;
 pub use stack::StackPass;
 pub use control_flow::ControlFlowPass;
+pub use opaque_predicates::OpaquePredicatesPass;
 
 /// Trait for all obfuscation passes.
 pub trait Pass {
@@ -114,6 +117,7 @@ impl Default for PassManager {
         manager.add_pass(Box::new(ArithmeticPass::new()));
         manager.add_pass(Box::new(StackPass::new()));
         manager.add_pass(Box::new(ControlFlowPass::new()));
+        manager.add_pass(Box::new(OpaquePredicatesPass::new()));
         manager
     }
 }
