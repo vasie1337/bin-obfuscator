@@ -32,7 +32,7 @@ impl MutationPass {
 
             let displacement = instruction.instruction.memory_displacement64();
             let mut new_instruction = instruction.clone();
-            new_instruction.instruction.set_memory_displacement64(displacement + random_value as u64);
+            new_instruction.instruction.set_memory_displacement64(displacement.wrapping_add(random_value as u64));
             result.push(new_instruction);
 
             if let Some(pushf_instr) = self.create_instruction(
