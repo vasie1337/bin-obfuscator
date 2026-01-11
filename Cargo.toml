@@ -1,5 +1,5 @@
 [workspace]
 members = [
-    "crates/core", "crates/cli", "crates/common", "crates/test-binary",
+    "crates/core", "crates/cli",
 ]
 resolver = "2"

@@ -1,10 +1,10 @@
 use clap::{Arg, ArgAction, Command};
-use common::{Logger, error, info};
 use log::LevelFilter;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
+use log::{info, error};
 
 fn load_file(path: &Path) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let mut file =
@@ -132,7 +132,9 @@ fn main() {
         }
     };
 
-    Logger::ensure_init_with_level(log_level);
+    env_logger::Builder::new()
+        .filter_level(log_level)
+        .init();
 
     let binary_path = Path::new(matches.get_one::<String>("binary").unwrap());
     let pdb_path = Path::new(matches.get_one::<String>("pdb").unwrap());
@@ -160,7 +162,7 @@ fn main() {
 
     info!("Loading input files...");
 
-    let pe_data = match load_file(binary_path) {
+    let pe_binary = match load_file(binary_path) {
         Ok(data) => {
             info!(
                 "Loaded binary: {:.2} MB",
@@ -187,10 +189,10 @@ fn main() {
 
     info!("Starting obfuscation process...");
 
-    let obfuscated_data = match core::run(&pe_data, &pdb_data) {
-        Ok(data) => {
+    let obf_binary = match core::obfuscate(&pe_binary, &pdb_data) {
+        Ok(obf_binary) => {
             info!("Obfuscation completed successfully");
-            data
+            obf_binary
         }
         Err(e) => {
             error!("Obfuscation failed: {e}");
@@ -200,7 +202,7 @@ fn main() {
 
     info!("Saving obfuscated binary...");
 
-    if let Err(e) = save_file(&output_path, &obfuscated_data) {
+    if let Err(e) = save_file(&output_path, &obf_binary) {
         error!("Failed to save output: {e}");
         process::exit(1);
     }
@@ -211,7 +213,7 @@ fn main() {
     );
     info!(
         "Original size: {:.2} MB, Obfuscated size: {:.2} MB",
-        pe_data.len() as f64 / 1024.0 / 1024.0,
-        obfuscated_data.len() as f64 / 1024.0 / 1024.0
+        pe_binary.len() as f64 / 1024.0 / 1024.0,
+        obf_binary.len() as f64 / 1024.0 / 1024.0
     );
 }
