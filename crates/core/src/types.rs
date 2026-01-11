@@ -23,10 +23,24 @@ impl fmt::Display for FunctionInfo {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum FunctionSource {
+    EntryPoint, // Highest priority
     Export,
     ExceptionHandler,
     TlsCallback,
-    EntryPoint,
+    CallTarget, // Lowest priority
+}
+
+impl FunctionSource {
+    /// Returns the priority of the source (lower number = higher priority)
+    pub fn priority(&self) -> u8 {
+        match self {
+            FunctionSource::EntryPoint => 0,
+            FunctionSource::Export => 1,
+            FunctionSource::ExceptionHandler => 2,
+            FunctionSource::TlsCallback => 3,
+            FunctionSource::CallTarget => 4,
+        }
+    }
 }

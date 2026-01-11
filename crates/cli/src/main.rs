@@ -1,10 +1,10 @@
 use clap::{Arg, ArgAction, Command};
 use log::LevelFilter;
+use log::{error, info};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
-use log::{info, error};
 
 fn main() {
     let app = Command::new("bin-obfuscator")
@@ -54,9 +54,7 @@ fn main() {
         }
     };
 
-    env_logger::Builder::new()
-        .filter_level(log_level)
-        .init();
+    env_logger::Builder::new().filter_level(log_level).init();
 
     let binary_path = Path::new(matches.get_one::<String>("binary").unwrap());
 
@@ -72,9 +70,7 @@ fn main() {
     }
 
     let pe_binary = match load_file(binary_path) {
-        Ok(data) => {
-            data
-        }
+        Ok(data) => data,
         Err(e) => {
             error!("Failed to load binary: {e}");
             process::exit(1);
