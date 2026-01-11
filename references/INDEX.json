@@ -538,6 +538,25 @@
         "working with instruction encoding"
       ],
       "estimated_tokens": 20000
+    },
+    {
+      "id": "branch-jump-tables",
+      "filename": "data/Branch table.md",
+      "title": "Branch Jump Tables",
+      "categories": ["control-flow", "analysis", "jump-tables"],
+      "techniques": [
+        "jump table recognition",
+        "switch statement recovery",
+        "IDA Pro analysis"
+      ],
+      "keywords": ["IDA", "Hex-Rays", "jump tables", "decompiler", "switch"],
+      "summary": "How IDA Pro recognizes and reconstructs jump tables from disassembly.",
+      "use_for": [
+        "understanding jump table recognition",
+        "learning switch statement recovery",
+        "working with IDA Pro analysis"
+      ],
+      "estimated_tokens": 10000
     }
   ],
   "categories": {
