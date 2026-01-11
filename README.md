@@ -187,10 +187,10 @@ x86-64 PE binary obfuscation tool. Transforms executable code to resist reverse 
 
 ## Passes
 
-- **Arithmetic** - LEA displacement obfuscation, constant splitting
-- **Stack** - PUSH/POP expansion to MOV + LEA
-- **Control Flow** - Call obfuscation (call → lea + push + jmp)
-- **Opaque Predicates** - Computational noise insertion
+- **[Arithmetic](docs/arithmetic-pass.md)** - LEA displacement obfuscation, constant splitting
+- **[Stack](docs/stack-pass.md)** - PUSH/POP expansion to MOV + LEA
+- **[Control Flow](docs/control-flow-pass.md)** - Call obfuscation (call → lea + push + jmp)
+- **[Opaque Predicates](docs/opaque-predicates-pass.md)** - Computational noise insertion
 
 ## Usage
 
