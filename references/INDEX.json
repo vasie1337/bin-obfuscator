@@ -1,0 +1,560 @@
+{
+  "version": "1.0",
+  "description": "Searchable index for bin-obfuscator reference materials",
+  "usage": "Query this index to find relevant references before loading full documents",
+  "references": [
+    {
+      "id": "indirect-control-flow",
+      "filename": "data/Obfuscation Through Indirect Control Flow.md",
+      "title": "LummaC2: Obfuscation Through Indirect Control Flow",
+      "source": "Mandiant Blog",
+      "categories": ["control-flow-obfuscation", "deobfuscation", "malware-analysis"],
+      "techniques": [
+        "dispatcher blocks",
+        "indirect jumps",
+        "control flow flattening",
+        "register-based dispatchers",
+        "memory-based dispatchers",
+        "conditional dispatchers",
+        "symbolic backward slicing"
+      ],
+      "tools": ["Triton", "IDA Pro", "Ghidra"],
+      "keywords": ["dispatcher", "indirect jump", "control flow", "symbolic execution", "backward slicing", "deobfuscation"],
+      "summary": "Detailed analysis of LummaC2's control flow obfuscation using dispatcher blocks with indirect jumps. Covers three dispatcher types (register-based, memory-based, mixed-order) and three conditional dispatcher categories. Includes complete deobfuscation methodology using Triton symbolic execution engine.",
+      "key_concepts": {
+        "dispatcher_blocks": "Transforms control flow into scattered blocks with indirect jumps",
+        "backward_slicing": "Technique to differentiate dispatcher vs original instructions",
+        "control_flow_recovery": "DFS traversal to reconstruct original execution paths"
+      },
+      "use_for": [
+        "implementing dispatcher-based control flow obfuscation",
+        "understanding how to hide control flow with indirect jumps",
+        "learning symbolic execution for deobfuscation",
+        "designing resilient obfuscation against static analysis"
+      ],
+      "estimated_tokens": 5500
+    },
+    {
+      "id": "ryujin-bin2bin",
+      "filename": "data/Ryūjin - Writing a Bin2Bin Obfuscator from Scratch for Windows PE x64.md",
+      "title": "Ryūjin - Writing a Bin2Bin Obfuscator from Scratch",
+      "categories": ["binary-obfuscation", "pe-format", "implementation"],
+      "techniques": [
+        "bin2bin transformation",
+        "PE file manipulation",
+        "instruction substitution",
+        "code expansion",
+        "relocation"
+      ],
+      "keywords": ["PE", "x64", "bin2bin", "obfuscator", "relocation", "code transformation"],
+      "summary": "Comprehensive guide on building a binary-to-binary obfuscator for Windows PE x64 executables. Covers PE format parsing, code transformation, relocation handling, and implementation challenges.",
+      "use_for": [
+        "implementing PE file obfuscation",
+        "understanding binary transformation techniques",
+        "handling relocations in modified binaries",
+        "learning PE file format internals"
+      ],
+      "estimated_tokens": 47000
+    },
+    {
+      "id": "branch-jump-tables",
+      "filename": "data/Branch and Jump Tables in C and x86 assembly.md",
+      "title": "Branch and Jump Tables in C and x86 Assembly",
+      "categories": ["control-flow", "compiler-optimization", "assembly"],
+      "techniques": [
+        "jump tables",
+        "branch tables",
+        "switch statement optimization",
+        "computed jumps"
+      ],
+      "keywords": ["jump table", "switch", "computed jump", "indirect branch", "compiler optimization"],
+      "summary": "Explains how compilers generate jump tables for switch statements and how they work at assembly level. Covers both direct and indirect jump table implementations.",
+      "use_for": [
+        "understanding compiler-generated jump tables",
+        "implementing custom jump table obfuscation",
+        "analyzing switch statement disassembly",
+        "creating indirect control flow"
+      ],
+      "estimated_tokens": 3000
+    },
+    {
+      "id": "anti-debugging",
+      "filename": "data/Anti Debugging Protection Techniques with Examples.md",
+      "title": "Anti Debugging Protection Techniques with Examples",
+      "categories": ["anti-debug", "protection", "detection"],
+      "techniques": [
+        "IsDebuggerPresent",
+        "PEB checks",
+        "timing attacks",
+        "hardware breakpoint detection",
+        "exception-based detection"
+      ],
+      "keywords": ["anti-debug", "debugger detection", "PEB", "timing", "exceptions"],
+      "summary": "Collection of anti-debugging techniques with practical examples. Covers API-based detection, manual PEB inspection, timing-based detection, and exception handling tricks.",
+      "use_for": [
+        "adding anti-debugging to obfuscated binaries",
+        "understanding debugger detection methods",
+        "implementing runtime environment checks"
+      ],
+      "estimated_tokens": 30000
+    },
+    {
+      "id": "x64-exception-handling",
+      "filename": "data/x64 exception handling.md",
+      "title": "x64 Exception Handling",
+      "categories": ["exception-handling", "x64", "pe-format"],
+      "techniques": [
+        "structured exception handling",
+        "unwind tables",
+        "exception directories",
+        "RUNTIME_FUNCTION"
+      ],
+      "keywords": ["SEH", "exception", "unwind", "x64", "PE", "RUNTIME_FUNCTION"],
+      "summary": "Deep dive into Windows x64 structured exception handling mechanism. Covers exception directory structure, unwind information, and RUNTIME_FUNCTION tables.",
+      "use_for": [
+        "understanding SEH internals for obfuscation",
+        "manipulating exception handling metadata",
+        "creating exception-based control flow",
+        "fixing exception tables after code transformation"
+      ],
+      "estimated_tokens": 8000
+    },
+    {
+      "id": "iat-hiding",
+      "filename": "data/IAT Hiding & Obfuscation.md",
+      "title": "IAT Hiding & Obfuscation",
+      "categories": ["import-obfuscation", "pe-format", "api-hiding"],
+      "techniques": [
+        "IAT encryption",
+        "dynamic API resolution",
+        "API hashing",
+        "manual GetProcAddress"
+      ],
+      "keywords": ["IAT", "import", "API", "dynamic resolution", "GetProcAddress"],
+      "summary": "Techniques for hiding and obfuscating the Import Address Table. Covers IAT encryption, dynamic API loading, and various methods to hide API dependencies.",
+      "use_for": [
+        "hiding API imports from static analysis",
+        "implementing dynamic API resolution",
+        "obfuscating function dependencies"
+      ],
+      "estimated_tokens": 12000
+    },
+    {
+      "id": "polymorphic-engine-golang",
+      "filename": "data/Writing a Polymorphic Engine in Golang.md",
+      "title": "Writing a Polymorphic Engine in Golang",
+      "categories": ["polymorphism", "code-generation", "mutation"],
+      "techniques": [
+        "instruction substitution",
+        "register permutation",
+        "junk code insertion",
+        "code mutation"
+      ],
+      "keywords": ["polymorphic", "mutation", "code generation", "instruction substitution"],
+      "summary": "Guide to building a polymorphic code engine that generates functionally equivalent but syntactically different code.",
+      "use_for": [
+        "implementing polymorphic code generation",
+        "understanding instruction substitution",
+        "creating unique code variations"
+      ],
+      "estimated_tokens": 8000
+    },
+    {
+      "id": "metamorphic-malware",
+      "filename": "data/Metamorphic Malware.md",
+      "title": "Metamorphic Malware",
+      "categories": ["metamorphism", "code-transformation", "mutation"],
+      "techniques": [
+        "metamorphic engines",
+        "code permutation",
+        "semantic equivalence",
+        "self-modification"
+      ],
+      "keywords": ["metamorphic", "self-modifying", "code transformation", "mutation engine"],
+      "summary": "Overview of metamorphic code techniques where code rewrites itself while maintaining functionality.",
+      "use_for": [
+        "understanding metamorphic vs polymorphic",
+        "implementing self-modifying code",
+        "creating advanced mutation engines"
+      ],
+      "estimated_tokens": 6000
+    },
+    {
+      "id": "ollvm-enhanced",
+      "filename": "data/IOLLVM ENHANCED VERSION OF OLLVM.md",
+      "title": "IOLLVM - Enhanced Version of OLLVM",
+      "categories": ["compiler-obfuscation", "llvm", "control-flow"],
+      "techniques": [
+        "control flow flattening",
+        "bogus control flow",
+        "instruction substitution",
+        "LLVM passes"
+      ],
+      "keywords": ["OLLVM", "LLVM", "control flow flattening", "compiler", "obfuscation passes"],
+      "summary": "Enhanced version of OLLVM (Obfuscator-LLVM) with additional obfuscation transformations and improvements.",
+      "use_for": [
+        "understanding compiler-level obfuscation",
+        "learning LLVM pass development",
+        "implementing control flow flattening"
+      ],
+      "estimated_tokens": 5000
+    },
+    {
+      "id": "symbolic-deobfuscation",
+      "filename": "data/Symbolic deobfuscation.md",
+      "title": "Symbolic Deobfuscation",
+      "categories": ["deobfuscation", "symbolic-execution", "analysis"],
+      "techniques": [
+        "symbolic execution",
+        "constraint solving",
+        "path exploration",
+        "SMT solvers"
+      ],
+      "keywords": ["symbolic execution", "deobfuscation", "SMT", "Z3", "constraint solving"],
+      "summary": "Using symbolic execution and constraint solving to automatically deobfuscate code. Covers tools and techniques for automated analysis.",
+      "use_for": [
+        "understanding deobfuscation resistance",
+        "learning symbolic execution fundamentals",
+        "designing obfuscation resilient to symbolic analysis"
+      ],
+      "estimated_tokens": 7000
+    },
+    {
+      "id": "pe-loader",
+      "filename": "data/Writing a local PE Loader from scratch.md",
+      "title": "Writing a Local PE Loader from Scratch",
+      "categories": ["pe-format", "loader", "windows"],
+      "techniques": [
+        "PE parsing",
+        "section loading",
+        "import resolution",
+        "relocation processing",
+        "TLS callbacks"
+      ],
+      "keywords": ["PE loader", "manual mapping", "sections", "imports", "relocations"],
+      "summary": "Complete guide to implementing a custom PE loader including parsing, mapping, import resolution, and relocations.",
+      "use_for": [
+        "understanding PE loading process",
+        "implementing custom loaders",
+        "handling PE file internals",
+        "building packers/protectors"
+      ],
+      "estimated_tokens": 15000
+    },
+    {
+      "id": "relocation-generation",
+      "filename": "data/Relocation generation in assemblers.md",
+      "title": "Relocation Generation in Assemblers",
+      "categories": ["relocations", "assembly", "linking"],
+      "techniques": [
+        "relocation types",
+        "address fixups",
+        "position-independent code",
+        "relocation tables"
+      ],
+      "keywords": ["relocations", "fixups", "address patching", "PIC", "assembler"],
+      "summary": "How assemblers generate relocation information and how relocations are processed during linking and loading.",
+      "use_for": [
+        "handling relocations in code transformation",
+        "understanding address fixups",
+        "implementing binary modification with correct relocations"
+      ],
+      "estimated_tokens": 6000
+    },
+    {
+      "id": "virtualization-obfuscation",
+      "filename": "data/Robust Virtualization Obfuscation with Assembly-Based Mixed Boolean-Arithmetic.md",
+      "title": "Robust Virtualization Obfuscation with Mixed Boolean-Arithmetic",
+      "categories": ["virtualization", "vm-based-obfuscation", "mba"],
+      "techniques": [
+        "virtual machine obfuscation",
+        "mixed boolean-arithmetic",
+        "custom VM design",
+        "bytecode interpretation"
+      ],
+      "keywords": ["VM obfuscation", "virtualization", "MBA", "bytecode", "interpreter"],
+      "summary": "Advanced VM-based obfuscation using custom virtual machines and mixed boolean-arithmetic expressions.",
+      "use_for": [
+        "implementing VM-based obfuscation",
+        "understanding virtualization protection",
+        "using MBA expressions for obfuscation"
+      ],
+      "estimated_tokens": 12000
+    },
+    {
+      "id": "theodosius",
+      "filename": "data/Theodosius - Jit linker, Symbol Mapper, and Obfuscator.md",
+      "title": "Theodosius - JIT Linker, Symbol Mapper, and Obfuscator",
+      "categories": ["jit-linking", "obfuscation", "tools"],
+      "techniques": [
+        "JIT linking",
+        "symbol mapping",
+        "runtime code generation",
+        "mutation"
+      ],
+      "keywords": ["JIT", "linker", "symbol mapper", "runtime", "obfuscation"],
+      "summary": "Tool that provides JIT linking, symbol mapping, and obfuscation capabilities for runtime code generation.",
+      "use_for": [
+        "understanding JIT compilation obfuscation",
+        "runtime code generation techniques",
+        "symbol obfuscation methods"
+      ],
+      "estimated_tokens": 8000
+    },
+    {
+      "id": "padding-function-detection",
+      "filename": "data/Padding Matters – Exploring Function Detection in PE Files.md",
+      "title": "Padding Matters - Function Detection in PE Files",
+      "categories": ["function-detection", "analysis", "pe-format"],
+      "techniques": [
+        "function boundary detection",
+        "padding bytes",
+        "function start heuristics"
+      ],
+      "keywords": ["function detection", "padding", "boundaries", "disassembly"],
+      "summary": "How padding affects function detection in disassemblers and techniques to obfuscate function boundaries.",
+      "use_for": [
+        "obfuscating function boundaries",
+        "understanding function detection algorithms",
+        "using padding for anti-analysis"
+      ],
+      "estimated_tokens": 7000
+    },
+    {
+      "id": "x64-jumps",
+      "filename": "data/Let's Learn x86-64 Assembly! Part 4 - More About Jumps Than You Wanted To Know.md",
+      "title": "x86-64 Assembly - More About Jumps Than You Wanted To Know",
+      "categories": ["assembly", "control-flow", "x64"],
+      "techniques": [
+        "conditional jumps",
+        "unconditional jumps",
+        "relative addressing",
+        "far jumps"
+      ],
+      "keywords": ["jumps", "x64", "assembly", "control flow", "addressing modes"],
+      "summary": "Comprehensive guide to jump instructions in x86-64 assembly including conditional, unconditional, near, and far jumps.",
+      "use_for": [
+        "understanding jump instruction encoding",
+        "implementing jump-based obfuscation",
+        "working with different jump types"
+      ],
+      "estimated_tokens": 9000
+    },
+    {
+      "id": "jump-tables-hexrays",
+      "filename": "data/Jump tables – Hex Rays.md",
+      "title": "Jump Tables - Hex-Rays",
+      "categories": ["analysis", "decompilation", "jump-tables"],
+      "techniques": [
+        "jump table recognition",
+        "switch statement recovery",
+        "IDA Pro analysis"
+      ],
+      "keywords": ["IDA", "Hex-Rays", "jump tables", "decompiler", "switch"],
+      "summary": "How Hex-Rays decompiler recognizes and reconstructs jump tables from disassembly.",
+      "use_for": [
+        "understanding how decompilers handle jump tables",
+        "obfuscating jump tables to evade analysis",
+        "working with IDA Pro"
+      ],
+      "estimated_tokens": 4000
+    },
+    {
+      "id": "mutation-engine-aimware",
+      "filename": "data/Writing a Mutation Engine and breaking Aimware.md",
+      "title": "Writing a Mutation Engine and Breaking Aimware",
+      "categories": ["mutation", "polymorphism", "anti-cheat"],
+      "techniques": [
+        "mutation engine",
+        "code obfuscation",
+        "instruction substitution",
+        "anti-pattern techniques"
+      ],
+      "keywords": ["mutation", "polymorphic", "anti-cheat", "code generation"],
+      "summary": "Practical guide to building a mutation engine with examples of defeating anti-cheat systems.",
+      "use_for": [
+        "implementing mutation engines",
+        "understanding anti-pattern detection",
+        "evading signature-based detection"
+      ],
+      "estimated_tokens": 10000
+    },
+    {
+      "id": "polymorphic-engine-improvements",
+      "filename": "data/Improving our Polymorphic Engine with an integrated disassembler and codecaves.md",
+      "title": "Improving Polymorphic Engine with Disassembler and Code Caves",
+      "categories": ["polymorphism", "code-caves", "disassembly"],
+      "techniques": [
+        "integrated disassembler",
+        "code cave detection",
+        "polymorphic code placement",
+        "length disassembly"
+      ],
+      "keywords": ["polymorphic", "code caves", "disassembler", "mutation"],
+      "summary": "Enhancements to polymorphic engines by integrating disassemblers and utilizing code caves for placement.",
+      "use_for": [
+        "improving polymorphic code generation",
+        "finding and using code caves",
+        "integrating disassemblers in obfuscators"
+      ],
+      "estimated_tokens": 8000
+    },
+    {
+      "id": "defeating-angr",
+      "filename": "data/Defeating Code Obfuscation with Angr.md",
+      "title": "Defeating Code Obfuscation with Angr",
+      "categories": ["deobfuscation", "symbolic-execution", "tools"],
+      "techniques": [
+        "angr framework",
+        "symbolic execution",
+        "constraint solving",
+        "automated deobfuscation"
+      ],
+      "keywords": ["angr", "symbolic execution", "deobfuscation", "binary analysis"],
+      "summary": "Using the angr binary analysis framework to automatically defeat common obfuscation techniques.",
+      "use_for": [
+        "understanding angr-resistant obfuscation",
+        "learning symbolic execution weaknesses",
+        "designing resilient obfuscation"
+      ],
+      "estimated_tokens": 9000
+    },
+    {
+      "id": "technical-challenges-indirect-cf",
+      "filename": "data/Technical Challenges of Indirect Control Flow.md",
+      "title": "Technical Challenges of Indirect Control Flow",
+      "categories": ["control-flow", "analysis", "challenges"],
+      "techniques": [
+        "indirect control flow",
+        "analysis limitations",
+        "recovery challenges"
+      ],
+      "keywords": ["indirect control flow", "analysis", "challenges", "limitations"],
+      "summary": "Discussion of technical challenges in analyzing and recovering indirect control flow in obfuscated code.",
+      "use_for": [
+        "understanding analysis tool limitations",
+        "exploiting indirect control flow for obfuscation",
+        "learning about analysis challenges"
+      ],
+      "estimated_tokens": 7000
+    },
+    {
+      "id": "malware-obfuscation-techniques",
+      "filename": "data/Malware Obfuscation Techniques.md",
+      "title": "Malware Obfuscation Techniques",
+      "categories": ["obfuscation", "malware", "overview"],
+      "techniques": [
+        "packing",
+        "encryption",
+        "polymorphism",
+        "metamorphism",
+        "anti-analysis"
+      ],
+      "keywords": ["malware", "obfuscation", "packing", "encryption", "anti-analysis"],
+      "summary": "Comprehensive overview of obfuscation techniques commonly used in malware.",
+      "use_for": [
+        "understanding common obfuscation methods",
+        "getting overview of available techniques",
+        "learning malware protection strategies"
+      ],
+      "estimated_tokens": 15000
+    },
+    {
+      "id": "obfuscating-native-code",
+      "filename": "data/Obfuscating native code for fun.md",
+      "title": "Obfuscating Native Code for Fun",
+      "categories": ["obfuscation", "native-code", "practical"],
+      "techniques": [
+        "instruction substitution",
+        "junk code",
+        "control flow obfuscation",
+        "practical examples"
+      ],
+      "keywords": ["native code", "obfuscation", "assembly", "practical"],
+      "summary": "Practical guide to obfuscating native code with examples and techniques.",
+      "use_for": [
+        "learning practical obfuscation implementation",
+        "getting hands-on examples",
+        "understanding basic to intermediate techniques"
+      ],
+      "estimated_tokens": 10000
+    },
+    {
+      "id": "seh-exceptional-behavior",
+      "filename": "data/Exceptional Behavior - x64 Structured Exception Handling.md",
+      "title": "Exceptional Behavior - x64 Structured Exception Handling",
+      "categories": ["exception-handling", "x64", "seh"],
+      "techniques": [
+        "structured exception handling",
+        "exception-based control flow",
+        "unwind information",
+        "exception filters"
+      ],
+      "keywords": ["SEH", "exceptions", "x64", "unwind", "filters"],
+      "summary": "In-depth coverage of x64 structured exception handling mechanism and its use in obfuscation.",
+      "use_for": [
+        "implementing exception-based obfuscation",
+        "understanding SEH internals",
+        "using exceptions for control flow"
+      ],
+      "estimated_tokens": 12000
+    },
+    {
+      "id": "windows-eh-metadata",
+      "filename": "data/Use of Windows Exception Handling Metadata.md",
+      "title": "Use of Windows Exception Handling Metadata",
+      "categories": ["exception-handling", "metadata", "windows"],
+      "techniques": [
+        "exception metadata",
+        "pdata section",
+        "unwind codes",
+        "metadata manipulation"
+      ],
+      "keywords": ["exception", "metadata", "pdata", "unwind", "Windows"],
+      "summary": "How Windows uses exception handling metadata and how it can be manipulated for obfuscation.",
+      "use_for": [
+        "manipulating exception metadata",
+        "understanding pdata section",
+        "fixing exception tables after obfuscation"
+      ],
+      "estimated_tokens": 8000
+    },
+    {
+      "id": "x64-deep-dive",
+      "filename": "data/X64 Deep Dive.md",
+      "title": "X64 Deep Dive",
+      "categories": ["x64", "architecture", "fundamentals"],
+      "techniques": [
+        "x64 architecture",
+        "calling conventions",
+        "registers",
+        "instruction encoding"
+      ],
+      "keywords": ["x64", "architecture", "calling conventions", "registers", "encoding"],
+      "summary": "Comprehensive deep dive into x64 architecture, registers, calling conventions, and instruction encoding.",
+      "use_for": [
+        "understanding x64 fundamentals",
+        "learning calling conventions",
+        "working with instruction encoding"
+      ],
+      "estimated_tokens": 20000
+    }
+  ],
+  "categories": {
+    "control-flow-obfuscation": ["indirect-control-flow", "branch-jump-tables", "ollvm-enhanced", "technical-challenges-indirect-cf", "x64-jumps"],
+    "pe-format": ["ryujin-bin2bin", "x64-exception-handling", "iat-hiding", "pe-loader", "padding-function-detection", "seh-exceptional-behavior", "windows-eh-metadata"],
+    "polymorphism": ["polymorphic-engine-golang", "metamorphic-malware", "mutation-engine-aimware", "polymorphic-engine-improvements"],
+    "deobfuscation": ["indirect-control-flow", "symbolic-deobfuscation", "defeating-angr"],
+    "anti-debug": ["anti-debugging"],
+    "virtualization": ["virtualization-obfuscation"],
+    "assembly": ["branch-jump-tables", "x64-jumps", "x64-deep-dive", "obfuscating-native-code"],
+    "tools": ["theodosius", "defeating-angr"],
+    "overview": ["malware-obfuscation-techniques"]
+  },
+  "quick_reference": {
+    "control_flow_techniques": ["dispatcher blocks", "control flow flattening", "opaque predicates", "jump tables", "indirect jumps"],
+    "data_obfuscation": ["IAT hiding", "string encryption", "constant obfuscation", "MBA expressions"],
+    "anti_analysis": ["anti-debugging", "anti-VM", "timing checks", "exception-based detection"],
+    "code_transformation": ["instruction substitution", "junk code insertion", "register permutation", "code mutation"]
+  }
+}

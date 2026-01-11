@@ -7,7 +7,16 @@
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:github.com)",
       "Bash(cargo tree:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(for f in *.md)",
+      "Bash(do if [ \"$f\" != \"README.md\" ])",
+      "Bash([ \"$f\" != \"LLM_USAGE_GUIDE.md\" ])",
+      "Bash(then mv \"$f\" \"data/$f\")",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(python references/query_references.py search:*)",
+      "Bash(python:*)",
+      "Bash(test:*)"
     ]
   }
 }
