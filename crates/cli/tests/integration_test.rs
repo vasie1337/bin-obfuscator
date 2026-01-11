@@ -161,8 +161,8 @@ fn test_original_binary_passes_all_tests() {
     let pass_count = output.matches("[PASS]").count();
     println!("Original binary: {} tests passed", pass_count);
     assert!(
-        pass_count >= 20,
-        "Expected at least 20 tests, got {}",
+        pass_count >= 64,
+        "Expected at least 64 tests, got {}",
         pass_count
     );
 }
@@ -194,4 +194,102 @@ fn test_obfuscation_increases_binary_size() {
         obfuscated_data.len(),
         increase_pct
     );
+
+    // Obfuscation should increase size by at least 10%
+    assert!(
+        increase_pct > 10.0,
+        "Expected significant size increase, got {:.1}%",
+        increase_pct
+    );
+}
+
+#[test]
+fn test_obfuscation_with_verbose_logging() {
+    // Build test-binary
+    build_package("test-binary");
+
+    let (exe_path, pdb_path) = get_test_binary_paths();
+
+    let pe_data = fs::read(&exe_path).expect("Failed to read test binary");
+    let pdb_data = fs::read(&pdb_path).expect("Failed to read PDB file");
+
+    // Just verify obfuscation runs without errors
+    let result = core::run(&pe_data, &pdb_data);
+    assert!(result.is_ok(), "Obfuscation should succeed");
+
+    let obfuscated_data = result.unwrap();
+    println!("Obfuscation produced {} bytes", obfuscated_data.len());
+}
+
+#[test]
+fn test_multiple_obfuscation_runs_consistent() {
+    // Build test-binary
+    build_package("test-binary");
+
+    let (exe_path, pdb_path) = get_test_binary_paths();
+
+    let pe_data = fs::read(&exe_path).expect("Failed to read test binary");
+    let pdb_data = fs::read(&pdb_path).expect("Failed to read PDB file");
+
+    // Run obfuscation twice
+    let obfuscated1 = core::run(&pe_data, &pdb_data).expect("First obfuscation failed");
+    let obfuscated2 = core::run(&pe_data, &pdb_data).expect("Second obfuscation failed");
+
+    // Both should succeed and produce similar sizes (may vary due to randomization)
+    let size_diff = (obfuscated1.len() as i64 - obfuscated2.len() as i64).abs();
+    let size_diff_pct = (size_diff as f64 / obfuscated1.len() as f64) * 100.0;
+
+    println!(
+        "Run 1: {} bytes, Run 2: {} bytes (diff: {:.2}%)",
+        obfuscated1.len(),
+        obfuscated2.len(),
+        size_diff_pct
+    );
+
+    // Sizes should be within 20% of each other (allowing for randomization)
+    assert!(
+        size_diff_pct < 20.0,
+        "Obfuscation runs produced very different sizes: {:.2}%",
+        size_diff_pct
+    );
+}
+
+#[test]
+fn test_obfuscated_binary_output_format() {
+    // Build test-binary
+    build_package("test-binary");
+
+    let (exe_path, pdb_path) = get_test_binary_paths();
+    let obfuscated_path = target_dir().join("test-binary_output_test.exe");
+
+    let pe_data = fs::read(&exe_path).expect("Failed to read test binary");
+    let pdb_data = fs::read(&pdb_path).expect("Failed to read PDB file");
+
+    let obfuscated_data = core::run(&pe_data, &pdb_data).expect("Obfuscation failed");
+    fs::write(&obfuscated_path, &obfuscated_data).expect("Failed to write obfuscated binary");
+
+    let (output, success) = run_executable(&obfuscated_path);
+
+    assert!(success, "Obfuscated binary should execute successfully");
+
+    // Verify output format
+    assert!(
+        output.contains("[PASS]") || output.contains("[FAIL]"),
+        "Output should contain test markers"
+    );
+    assert!(
+        output.contains("RESULT:"),
+        "Output should contain result summary"
+    );
+
+    // Count test results
+    let pass_count = output.matches("[PASS]").count();
+    let fail_count = output.matches("[FAIL]").count();
+
+    println!(
+        "Obfuscated binary: {} passed, {} failed",
+        pass_count, fail_count
+    );
+
+    assert!(pass_count > 0, "Should have at least some passing tests");
 }

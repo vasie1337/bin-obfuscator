@@ -210,6 +210,8 @@ cargo build --release
 cargo test
 ```
 
+See [Testing Documentation](docs/testing.md) for comprehensive test coverage details.
+
 ## Requirements
 
 - Windows x64 PE binary

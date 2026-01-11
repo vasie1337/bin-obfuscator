@@ -90,6 +90,41 @@ impl AnalyzerContext {
         Ok(functions)
     }
 
+    fn has_jump_table(&self, func: &ObfuscatorFunction) -> bool {
+        use iced_x86::{Code, OpKind};
+        
+        // Check for indirect jump patterns that indicate jump tables
+        for inst_with_id in &func.instructions {
+            let inst = &inst_with_id.instruction;
+            
+            // Check for JMP with memory operand (typical jump table pattern)
+            // e.g., jmp qword ptr [rax*8+offset]
+            if matches!(inst.code(), Code::Jmp_rm64) {
+                // If it's an indirect jump with a memory operand
+                if inst.op0_kind() == OpKind::Memory {
+                    return true;
+                }
+            }
+        }
+        
+        false
+    }
+
+    fn filter_by_jump_tables(&self, mut functions: Vec<ObfuscatorFunction>) -> Vec<ObfuscatorFunction> {
+        let before = functions.len();
+        functions.retain(|f| !self.has_jump_table(f));
+        
+        let filtered_count = before - functions.len();
+        if filtered_count > 0 {
+            info!(
+                "Jump table filter: {} functions remaining (filtered out {} with jump tables)",
+                functions.len(),
+                filtered_count
+            );
+        }
+        functions
+    }
+
     pub fn analyze(&self) -> Result<Vec<ObfuscatorFunction>, String> {
         let pdb_functions = self
             .pdb_context
@@ -110,6 +145,11 @@ impl AnalyzerContext {
         }
 
         let mut functions = self.filter_by_exception(decoded_functions)?;
+        if functions.is_empty() {
+            return Err("No functions to analyze".to_string());
+        }
+
+        functions = self.filter_by_jump_tables(functions);
         if functions.is_empty() {
             return Err("No functions to analyze".to_string());
         }
