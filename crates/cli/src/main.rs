@@ -40,7 +40,13 @@ fn main() {
             .long_help("Run in quiet mode, only showing error messages.\n\
                        Cannot be used together with verbose flags.")
             .action(ArgAction::SetTrue)
-            .conflicts_with("verbose"));
+            .conflicts_with("verbose"))
+        .arg(Arg::new("export-json")
+            .long("export-json")
+            .help("Export basic block analysis to JSON")
+            .long_help("Instead of obfuscating, export the function and basic block analysis to JSON format.\n\
+                       Output file will have .json extension.")
+            .action(ArgAction::SetTrue));
 
     let matches = app.get_matches();
 
@@ -76,6 +82,45 @@ fn main() {
             process::exit(1);
         }
     };
+
+    if matches.get_flag("export-json") {
+        let mut engine = match core::ObfuscationEngine::new(&pe_binary) {
+            Ok(engine) => engine,
+            Err(e) => {
+                error!("Failed to create obfuscation engine: {e}");
+                process::exit(1);
+            }
+        };
+
+        if let Err(e) = engine.analyze() {
+            error!("Analysis failed: {e}");
+            process::exit(1);
+        }
+
+        let binary_name = binary_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+
+        let json_output = match engine.export_json(binary_name) {
+            Ok(json) => json,
+            Err(e) => {
+                error!("JSON export failed: {e}");
+                process::exit(1);
+            }
+        };
+
+        let json_path = output_path.with_extension("json");
+
+        if let Err(e) = save_file(&json_path, json_output.as_bytes()) {
+            error!("Failed to save JSON: {e}");
+            process::exit(1);
+        }
+
+        info!("Successfully exported CFG analysis to: {}", json_path.display());
+        return;
+    }
 
     let obf_binary = match core::obfuscate(&pe_binary) {
         Ok(obf_binary) => {
