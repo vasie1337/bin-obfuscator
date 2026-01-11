@@ -58,8 +58,30 @@ pub fn split_into_basic_blocks(
     let leaders = find_block_leaders(code, function_rva, config)?;
     let blocks = build_blocks(code, function_rva, leaders, config)?;
     let blocks = link_predecessors(blocks);
+    let blocks = filter_unreachable_padding(blocks, function_rva);
 
     Ok(blocks)
+}
+
+fn filter_unreachable_padding(blocks: Vec<BasicBlock>, entry_rva: u32) -> Vec<BasicBlock> {
+    blocks
+        .into_iter()
+        .filter(|block| {
+            if block.start_rva == entry_rva {
+                return true;
+            }
+
+            if !block.predecessors.is_empty() {
+                return true;
+            }
+
+            if block.bytes.iter().all(|&b| b == 0xCC || b == 0x90 || b == 0x00) {
+                return false;
+            }
+
+            true
+        })
+        .collect()
 }
 
 /// Find all basic block leaders (instructions that start a block)
@@ -114,11 +136,14 @@ fn find_block_leaders(
                 }
             }
 
-            FlowControl::Return | FlowControl::Interrupt => {
+            FlowControl::Return => {
                 let next_rva = instruction.next_ip() as u32;
                 if next_rva < function_rva + code.len() as u32 {
                     leaders.insert(next_rva);
                 }
+            }
+
+            FlowControl::Interrupt => {
             }
 
             FlowControl::IndirectBranch | FlowControl::IndirectCall => {
@@ -154,11 +179,23 @@ fn build_blocks(
             function_rva + code.len() as u32
         };
 
+        let offset = (start_rva - function_rva) as usize;
+        if offset < code.len() && is_padding_sequence(&code[offset..], 4) {
+            continue;
+        }
+
         let block = build_single_block(code, function_rva, start_rva, end_boundary, config)?;
         blocks.push(block);
     }
 
     Ok(blocks)
+}
+
+fn is_padding_sequence(bytes: &[u8], min_length: usize) -> bool {
+    if bytes.len() < min_length {
+        return false;
+    }
+    bytes.iter().take(min_length).all(|&b| b == 0xCC || b == 0x90 || b == 0x00)
 }
 
 /// Build a single basic block
