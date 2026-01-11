@@ -88,13 +88,6 @@ fn main() {
             .required(true)
             .value_name("BINARY_PATH")
             .index(1))
-        .arg(Arg::new("pdb")
-            .help("Path to the corresponding PDB debug file")
-            .long_help("Path to the Program Database (.pdb) file that contains debug information\n\
-                       for the binary. This file is essential for the obfuscation process.")
-            .required(true)
-            .value_name("PDB_PATH")
-            .index(2))
         .arg(Arg::new("output")
             .short('o')
             .long("output")
@@ -137,7 +130,6 @@ fn main() {
         .init();
 
     let binary_path = Path::new(matches.get_one::<String>("binary").unwrap());
-    let pdb_path = Path::new(matches.get_one::<String>("pdb").unwrap());
 
     let output_path = if let Some(output) = matches.get_one::<String>("output") {
         PathBuf::from(output)
@@ -152,15 +144,7 @@ fn main() {
         process::exit(1);
     }
 
-    if let Err(e) = validate_file_exists(pdb_path, "PDB") {
-        error!("{e}");
-        process::exit(1);
-    }
-
     info!("Input binary: {}", binary_path.display());
-    info!("PDB file: {}", pdb_path.display());
-
-    info!("Loading input files...");
 
     let pe_binary = match load_file(binary_path) {
         Ok(data) => {
@@ -176,20 +160,9 @@ fn main() {
         }
     };
 
-    let pdb_data = match load_file(pdb_path) {
-        Ok(data) => {
-            info!("Loaded PDB: {:.2} MB", data.len() as f64 / 1024.0 / 1024.0);
-            data
-        }
-        Err(e) => {
-            error!("Failed to load PDB: {e}");
-            process::exit(1);
-        }
-    };
-
     info!("Starting obfuscation process...");
 
-    let obf_binary = match core::obfuscate(&pe_binary, &pdb_data) {
+    let obf_binary = match core::obfuscate(&pe_binary) {
         Ok(obf_binary) => {
             info!("Obfuscation completed successfully");
             obf_binary
