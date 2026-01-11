@@ -1,13 +1,11 @@
 mod analysis;
 mod basicblock;
-mod export;
 mod types;
 
 pub use analysis::discover_functions;
 pub use basicblock::{
     BasicBlock, BlockTerminator, ControlFlowGraph, SplitConfig, split_into_basic_blocks,
 };
-pub use export::{BinaryExport, FunctionExport};
 pub use types::{FunctionInfo, FunctionSource};
 
 use pelite::pe::{Pe, PeFile};
@@ -127,21 +125,6 @@ impl<'a> ObfuscationEngine<'a> {
         self.basic_blocks
             .get(&rva)
             .map(|blocks| ControlFlowGraph::new(blocks.clone(), rva))
-    }
-
-    pub fn export_json(&self, binary_name: String) -> Result<String, String> {
-        let functions_data: Vec<_> = self
-            .functions
-            .iter()
-            .filter_map(|f| {
-                self.basic_blocks
-                    .get(&f.start_rva)
-                    .map(|blocks| (f, blocks))
-            })
-            .collect();
-
-        let export = BinaryExport::new(binary_name, functions_data);
-        export.to_json()
     }
 
     pub fn obfuscate(&self) -> Result<Vec<u8>, String> {

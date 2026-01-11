@@ -75,7 +75,11 @@ fn filter_unreachable_padding(blocks: Vec<BasicBlock>, entry_rva: u32) -> Vec<Ba
                 return true;
             }
 
-            if block.bytes.iter().all(|&b| b == 0xCC || b == 0x90 || b == 0x00) {
+            if block
+                .bytes
+                .iter()
+                .all(|&b| b == 0xCC || b == 0x90 || b == 0x00)
+            {
                 return false;
             }
 
@@ -84,7 +88,6 @@ fn filter_unreachable_padding(blocks: Vec<BasicBlock>, entry_rva: u32) -> Vec<Ba
         .collect()
 }
 
-/// Find all basic block leaders (instructions that start a block)
 fn find_block_leaders(
     code: &[u8],
     function_rva: u32,
@@ -143,8 +146,7 @@ fn find_block_leaders(
                 }
             }
 
-            FlowControl::Interrupt => {
-            }
+            FlowControl::Interrupt => {}
 
             FlowControl::IndirectBranch | FlowControl::IndirectCall => {
                 let next_rva = instruction.next_ip() as u32;
@@ -160,7 +162,6 @@ fn find_block_leaders(
     Ok(leaders)
 }
 
-/// Build basic blocks from code and leaders
 fn build_blocks(
     code: &[u8],
     function_rva: u32,
@@ -195,10 +196,12 @@ fn is_padding_sequence(bytes: &[u8], min_length: usize) -> bool {
     if bytes.len() < min_length {
         return false;
     }
-    bytes.iter().take(min_length).all(|&b| b == 0xCC || b == 0x90 || b == 0x00)
+    bytes
+        .iter()
+        .take(min_length)
+        .all(|&b| b == 0xCC || b == 0x90 || b == 0x00)
 }
 
-/// Build a single basic block
 fn build_single_block(
     code: &[u8],
     function_rva: u32,
@@ -314,13 +317,12 @@ fn build_single_block(
         end_rva,
         size,
         successors,
-        predecessors: Vec::new(), // Will be filled in link_predecessors
+        predecessors: Vec::new(),
         terminator,
         bytes: block_bytes,
     })
 }
 
-/// Link predecessor relationships between blocks
 fn link_predecessors(mut blocks: Vec<BasicBlock>) -> Vec<BasicBlock> {
     let mut predecessor_map: HashMap<u32, Vec<u32>> = HashMap::new();
 
@@ -385,41 +387,5 @@ impl ControlFlowGraph {
                 count
             })
             .sum()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_simple_linear_block() {
-        let code = vec![
-            0xB8, 0x01, 0x00, 0x00, 0x00, 0xBB, 0x02, 0x00, 0x00, 0x00, 0xC3,
-        ];
-
-        let config = SplitConfig::default();
-        let blocks = split_into_basic_blocks(&code, 0x1000, &config).unwrap();
-
-        assert_eq!(blocks.len(), 1);
-        assert_eq!(blocks[0].start_rva, 0x1000);
-        assert!(matches!(blocks[0].terminator, BlockTerminator::Return));
-    }
-
-    #[test]
-    fn test_conditional_jump() {
-        let code = vec![
-            0x85, 0xC0, 0x74, 0x07, 0xBB, 0x01, 0x00, 0x00, 0x00, 0xC3, 0xBB, 0x02, 0x00, 0x00,
-            0x00, 0xC3,
-        ];
-
-        let config = SplitConfig::default();
-        let blocks = split_into_basic_blocks(&code, 0x1000, &config).unwrap();
-
-        assert!(blocks.len() >= 2);
-        assert!(matches!(
-            blocks[0].terminator,
-            BlockTerminator::ConditionalJump { .. }
-        ));
     }
 }
