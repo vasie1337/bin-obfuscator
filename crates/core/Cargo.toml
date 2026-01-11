@@ -4,9 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-iced-x86 = { version = "1.21.0", features = ["code_asm"] }
-rand = "0.9.2"
-anyhow = "1.0"
-instant = "0.1"
-goblin = "0.10.0"
-symbolic = { version = "12.16.1", features = ["demangle"] }
+pelite = "0.10.0"
+iced-x86 = "1.21.0"
