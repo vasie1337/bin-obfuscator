@@ -1,5 +1,6 @@
-[workspace]
-members = [
-    "crates/core", "crates/cli", "crates/common", "crates/test-binary",
-]
-resolver = "2"
+[package]
+name = "x86-obfuscator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
